@@ -4,8 +4,19 @@ import { useApi } from '../../../../hooks/useApi';
 import { useSSEStream } from '../../../../hooks/useSSEStream';
 import MessageBubble from './MessageBubble';
 import ThinkingLoader from "./ThinkingLoader";
+import SearchTypeSelector from './SearchTypeSelector';
+import FilterModal from './FilterModal';
+import { Send } from 'lucide-react';
+import 'react-tooltip/dist/react-tooltip.css'; // ✅ IMPORTANTE: Importar CSS
 
-const ChatInterface = ({ chatStarted, setChatStarted, messages, setMessages, sidebarCollapsed, autoLoadAttempted = false}) => {
+const ChatInterface = ({
+                           chatStarted,
+                           setChatStarted,
+                           messages,
+                           setMessages,
+                           sidebarCollapsed,
+                           autoLoadAttempted = false
+                       }) => {
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [streamingMessage, setStreamingMessage] = useState('');
@@ -16,7 +27,12 @@ const ChatInterface = ({ chatStarted, setChatStarted, messages, setMessages, sid
     const [suggestedQuestions, setSuggestedQuestions] = useState([]);
     const [questionsLoading, setQuestionsLoading] = useState(false);
 
-    // ✅ NUEVOS ESTADOS PARA PERSISTENCIA
+    // ✅ NUEVOS ESTADOS PARA SEARCH TYPE Y FILTROS
+    const [searchType, setSearchType] = useState('standard');
+    const [showFilterModal, setShowFilterModal] = useState(false);
+    const [activeFilters, setActiveFilters] = useState({});
+
+    // Estados existentes...
     const [currentConversationId, setCurrentConversationId] = useState(null);
     const [conversationsLoading, setConversationsLoading] = useState(false);
 
@@ -28,17 +44,41 @@ const ChatInterface = ({ chatStarted, setChatStarted, messages, setMessages, sid
     const { post, get } = useApi();
     const { startStream, stopStream, isStreaming } = useSSEStream();
 
-    // ✅ FUNCIÓN PARA GENERAR IDS ÚNICOS
+    // ✅ FUNCIÓN PARA VERIFICAR SI HAY FILTROS ACTIVOS
+    const hasActiveFilters = useCallback(() => {
+        return Object.keys(activeFilters).length > 0 &&
+            Object.values(activeFilters).some(value => {
+                if (Array.isArray(value)) return value.length > 0;
+                if (typeof value === 'boolean') return value;
+                if (typeof value === 'string') return value !== '';
+                if (typeof value === 'number') return true;
+                return false;
+            });
+    }, [activeFilters]);
+
+    // ✅ FUNCIÓN PARA APLICAR FILTROS
+    const handleApplyFilters = useCallback((filters) => {
+        setActiveFilters(filters);
+        console.log('🔧 Filtros aplicados:', filters);
+    }, []);
+
+    // ✅ FUNCIÓN PARA CAMBIAR TIPO DE BÚSQUEDA
+    const handleSearchTypeChange = useCallback((type) => {
+        setSearchType(type);
+        console.log('🔍 Tipo de búsqueda cambiado a:', type);
+    }, []);
+
+    // Función para generar IDs únicos
     let messageIdCounter = 0;
     const generateUniqueId = () => {
         return `msg_${Date.now()}_${++messageIdCounter}_${Math.random().toString(36).substr(2, 9)}`;
     };
 
-    // ✅ FUNCIÓN HANDLESUBMIT MODIFICADA PARA PERSISTENCIA
+    // ✅ FUNCIÓN HANDLESUBMIT ACTUALIZADA CON FILTROS Y SEARCH TYPE
     const handleSubmit = useCallback(async (e, customText = null) => {
         e.preventDefault();
-
         const textToSend = customText || inputValue.trim();
+
         if (!textToSend || isLoading) {
             console.error('❌ Envío bloqueado - input vacío o cargando');
             return;
@@ -60,30 +100,38 @@ const ChatInterface = ({ chatStarted, setChatStarted, messages, setMessages, sid
         setIsUserScrolling(false);
 
         try {
+            // ✅ PREPARAR REQUEST DATA CON FILTROS Y SEARCH TYPE
             const requestData = {
                 question: textToSend,
                 conversation_id: currentConversationId,
-                chat_history: []
+                chat_history: [],
+                search_type: searchType,
+                ...(hasActiveFilters() && { filters: activeFilters })
             };
+
+            console.log('📤 Enviando request:', requestData);
+
             const response = await post('medchat/ask', requestData);
+
+            console.log(response)
+            debugger
             if (response.success) {
-                // ✅ ESTRUCTURA CORREGIDA CON 3 DATA
                 const aiResponse = response.data.data.data.answer;
                 const pubmedArticles = response.data.data.data.pubmed_articles || [];
                 const conversationId = response.data.data.conversation_id;
-                // ✅ ACTUALIZAR ID DE CONVERSACIÓN SI ES NUEVA
+                const usageInfo = response.data.usage_info || {};
+
+                console.log('📊 Información de uso:', usageInfo);
+
                 if (!currentConversationId && conversationId) {
                     setCurrentConversationId(conversationId);
                 }
 
-                // ✅ VERIFICAR QUE NO ESTÉ VACÍO
                 if (!aiResponse || typeof aiResponse !== 'string' || aiResponse.trim() === '') {
                     console.error('❌ aiResponse inválido:', aiResponse);
                     setIsLoading(false);
                     return;
                 }
-
-
 
                 const aiMessageId = generateUniqueId();
                 const aiMessage = {
@@ -92,24 +140,23 @@ const ChatInterface = ({ chatStarted, setChatStarted, messages, setMessages, sid
                     content: '',
                     timestamp: new Date(),
                     streaming: true,
-                    pubmedArticles: pubmedArticles
+                    pubmedArticles: pubmedArticles,
+                    searchType: searchType,
+                    usageInfo: usageInfo
                 };
 
                 setStreamingMessageId(aiMessageId);
                 setMessages(prev => [...prev, aiMessage]);
                 setIsLoading(false);
 
-
-                // ✅ EFECTO DE MÁQUINA DE ESCRIBIR CON MÁS DEBUGGING
+                // Efecto de máquina de escribir
                 let currentText = '';
                 for (let i = 0; i < aiResponse.length; i++) {
                     currentText += aiResponse[i];
-
                     setStreamingMessage(currentText);
 
                     const char = aiResponse[i];
                     let delay = 2;
-
                     if (char === '.' || char === '!' || char === '?') {
                         delay = 20;
                     } else if (char === ',' || char === ';' || char === ':') {
@@ -123,8 +170,7 @@ const ChatInterface = ({ chatStarted, setChatStarted, messages, setMessages, sid
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
 
-
-                // ✅ FINALIZAR STREAMING
+                // Finalizar streaming
                 setMessages(prev => prev.map(msg =>
                     msg.id === aiMessageId ? {
                         ...msg,
@@ -139,6 +185,7 @@ const ChatInterface = ({ chatStarted, setChatStarted, messages, setMessages, sid
             } else {
                 console.error('❌ Error en respuesta:', response);
                 setIsLoading(false);
+
                 const errorMessage = {
                     id: generateUniqueId(),
                     type: 'ai',
@@ -146,12 +193,14 @@ const ChatInterface = ({ chatStarted, setChatStarted, messages, setMessages, sid
                     timestamp: new Date(),
                     isError: true
                 };
+
                 setMessages(prev => [...prev, errorMessage]);
                 setError(response.error || 'Error desconocido');
             }
         } catch (error) {
             console.error('💥 Error completo:', error);
             setIsLoading(false);
+
             const errorMessage = {
                 id: generateUniqueId(),
                 type: 'ai',
@@ -159,10 +208,11 @@ const ChatInterface = ({ chatStarted, setChatStarted, messages, setMessages, sid
                 timestamp: new Date(),
                 isError: true
             };
+
             setMessages(prev => [...prev, errorMessage]);
             setError('Error de conexión');
         }
-    }, [inputValue, isLoading, currentConversationId, post, setChatStarted, setMessages]);
+    }, [inputValue, isLoading, currentConversationId, searchType, activeFilters, hasActiveFilters, post, setChatStarted, setMessages]);
 
     // ✅ FUNCIÓN PARA CARGAR CONVERSACIÓN ESPECÍFICA
     const loadConversation = useCallback(async (conversationId) => {
@@ -390,141 +440,138 @@ const ChatInterface = ({ chatStarted, setChatStarted, messages, setMessages, sid
     }, [loadConversation, handleNewChat]);
 
     return (
-        <div className="flex flex-col h-full bg-white">
-            {/* Error Message */}
+        <div className="flex flex-col h-full bg-gray-50">
+            {/* Header con información de búsqueda */}
+            {chatStarted && (
+                <div className="bg-white border-b px-4 py-2 text-sm text-gray-600">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <span>Modo: <strong>{
+                                searchType === 'simple' ? 'Búsqueda Simple' :
+                                    searchType === 'standard' ? 'Búsqueda Web' :
+                                        'Investigación Profunda'
+                            }</strong></span>
+                            {hasActiveFilters() && (
+                                <span className="text-green-600">
+                                    • Filtros activos
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Error display */}
             {error && (
-                <div className="flex-shrink-0 bg-red-50 border-l-4 border-red-400 p-4 mx-4 mt-4 rounded">
-                    <div className="flex">
-                        <div className="flex-shrink-0">
-                            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                        <div className="ml-3">
-                            <p className="text-sm text-red-700">{error}</p>
-                        </div>
-                    </div>
+                <div className="bg-red-50 border-l-4 border-red-400 p-4 mx-4 mt-4">
+                    <p className="text-red-700">{error}</p>
                 </div>
             )}
 
-            {/* Loading de conversaciones */}
+            {/* Loading conversation */}
             {conversationsLoading && (
-                <div className="flex-shrink-0 bg-blue-50 border-l-4 border-blue-400 p-4 mx-4 mt-4 rounded">
-                    <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
-                        <p className="text-sm text-blue-700">Cargando conversación...</p>
-                    </div>
+                <div className="flex items-center justify-center p-8">
+                    <div className="text-gray-500">Cargando conversación...</div>
                 </div>
             )}
 
-            {/* Messages Area */}
+            {/* Messages container */}
             <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-4 space-y-4"
+                className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
             >
-                {messages.length === 0 && !chatStarted && (
-                    <div className="text-center py-8">
-                        <div className="mb-6">
-                            <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                                Haz una pregunta sobre medicina, síntomas, tratamientos o cualquier tema de salud
-                            </h2>
-                            <p className="text-gray-600">
-                                Recibiendo respuesta en tiempo real...
-                            </p>
-                        </div>
+                {!chatStarted && !conversationsLoading && autoLoadAttempted && (
+                    <div className="text-center py-12">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                            ¿En qué puedo ayudarte hoy?
+                        </h2>
+                        <p className="text-gray-600 mb-8">
+                            Haz una pregunta médica o elige una de las sugerencias
+                        </p>
 
-                        {/* Preguntas Sugeridas */}
+                        {/* Suggested questions */}
                         {questionsLoading ? (
-                            <div className="flex justify-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            </div>
-                        ) : suggestedQuestions.length > 0 && (
-                            <div className="max-w-2xl mx-auto">
-                                <h3 className="text-lg font-medium text-gray-700 mb-4">
-                                    Preguntas sugeridas:
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {suggestedQuestions.slice(0, 4).map((question) => (
-                                        <button
-                                            key={question.id}
-                                            onClick={() => handleSuggestedQuestionClick(question.question)}
-                                            className="p-3 text-left bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg transition-all duration-200 group"
-                                        >
-                                            <div className="flex items-start">
-                                                <svg className="w-4 h-4 text-blue-500 mr-2 mt-0.5 group-hover:text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                                                </svg>
-                                                <span className="text-sm text-gray-700 group-hover:text-gray-900">
-                                                    {question.question}
-                                                </span>
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
+                            <div className="text-gray-500">Cargando preguntas sugeridas...</div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+                                {suggestedQuestions.map((q) => (
+                                    <button
+                                        key={q.id}
+                                        onClick={() => handleSuggestedQuestionClick(q.question)}
+                                        className="p-4 text-left bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                    >
+                                        <span className="text-gray-800">{q.question}</span>
+                                    </button>
+                                ))}
                             </div>
                         )}
                     </div>
                 )}
 
+                {/* Messages */}
                 {messages.map((message) => (
                     <MessageBubble
                         key={message.id}
                         message={message}
-                        streamingMessage={message.id === streamingMessageId ? streamingMessage : null}
+                        streamingMessage={streamingMessageId === message.id ? streamingMessage : null}
+                        isLoading={isLoading && message.id === streamingMessageId}
                     />
                 ))}
 
-                {isLoading && !streamingMessage && (
+                {/* Thinking loader */}
+                {isLoading && (
                     <div className="flex justify-start">
-                        <ThinkingLoader />
+                        <ThinkingLoader message="Recibiendo respuesta en tiempo real..." />
                     </div>
                 )}
 
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
-            <div className="flex-shrink-0 border-t border-gray-200 p-4">
-                <form onSubmit={handleSubmit} className="flex space-x-3">
-                    <div className="flex-1 relative">
+            {/* Input area */}
+            <div className="bg-white border-t p-4">
+                <form onSubmit={handleSubmit} className="flex items-end space-x-3">
+                    {/* Search Type Selector y Filter Button */}
+                    <SearchTypeSelector
+                        selectedType={searchType}
+                        onTypeChange={handleSearchTypeChange}
+                        onFilterClick={() => setShowFilterModal(true)}
+                        hasActiveFilters={hasActiveFilters()}
+                    />
+
+                    {/* Text input */}
+                    <div className="flex-1">
                         <textarea
                             ref={textareaRef}
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyPress={handleKeyPress}
                             placeholder="Escribe tu pregunta médica aquí..."
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-32"
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             rows="1"
+                            style={{ minHeight: '48px', maxHeight: '120px' }}
                             disabled={isLoading}
                         />
                     </div>
 
-                    <div className="flex flex-col space-y-2">
-                        <button
-                            type="submit"
-                            disabled={!inputValue.trim() || isLoading}
-                            className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                            </svg>
-                        </button>
-
-                        {isStreaming && (
-                            <button
-                                type="button"
-                                onClick={handleStopStream}
-                                className="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                                </svg>
-                            </button>
-                        )}
-                    </div>
+                    {/* Send button */}
+                    <button
+                        type="submit"
+                        disabled={!inputValue.trim() || isLoading}
+                        className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
+                    >
+                        <Send size={20} />
+                    </button>
                 </form>
             </div>
+
+            {/* Filter Modal */}
+            <FilterModal
+                isOpen={showFilterModal}
+                onClose={() => setShowFilterModal(false)}
+                onApplyFilters={handleApplyFilters}
+                currentFilters={activeFilters}
+            />
         </div>
     );
 };

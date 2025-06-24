@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 import { useLocalStorage } from '../../../hooks/useLocalStorage';
 import { useApi } from '../../../hooks/useApi';
+// import 'react-tooltip/dist/react-tooltip.css'; // ✅ AGREGAR ESTA LÍNEA
 
 const MedChat = () => {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { usePremiumAccess } from '../../../../hooks/usePremiumAccess';
 import PremiumModal from '../../../../components/PremiumModal';
+import { FaFilePdf, FaExternalLinkAlt, FaGlobe, FaDownload } from 'react-icons/fa';
 
 const PubMedArticles = ({ articles = [] }) => {
     const [showAll, setShowAll] = useState(false);
@@ -146,10 +147,19 @@ const PubMedArticles = ({ articles = [] }) => {
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 transition-colors"
                         >
-                            Ver artículo
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
+                            <FaExternalLinkAlt className="w-5 h-5" />
+                        </a>
+                    )}
+                    {article?.download_links?.pmc_pdf?.url && !isLocked && (
+                        <a
+                            href={article?.download_links?.pmc_pdf?.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download="articulo.pdf" // ✅ Fuerza descarga
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 transition-colors"
+                            title="Descargar PDF"
+                        >
+                            <FaFilePdf className="w-5 h-5 text-red-600" />
                         </a>
                     )}
                 </div>
