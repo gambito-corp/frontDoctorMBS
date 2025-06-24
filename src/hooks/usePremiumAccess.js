@@ -23,7 +23,7 @@ export const usePremiumAccess = () => {
                 const calculatedPremium = isProUser || hasRootRole || hasRectorRole;
 
                 // ✅ DEBUG HARDCODEADO - Cambia este valor para probar
-                const DEBUG_USER_TYPE = 'normal'; // Opciones: 'auto', 'normal', 'pro', 'root', 'rector'
+                const DEBUG_USER_TYPE = 'auto'; // Opciones: 'auto', 'normal', 'pro', 'root', 'rector'
 
                 let finalPremiumStatus;
 
