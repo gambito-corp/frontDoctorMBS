@@ -6,8 +6,11 @@ import MessageBubble from './MessageBubble';
 import ThinkingLoader from "./ThinkingLoader";
 import SearchTypeSelector from './SearchTypeSelector';
 import FilterModal from './FilterModal';
-import { Send } from 'lucide-react';
+import { Send, Paperclip, Mic, AlertCircle } from 'lucide-react';
 import 'react-tooltip/dist/react-tooltip.css'; // ✅ IMPORTANTE: Importar CSS
+import { usePremiumAccess } from '../../../../hooks/usePremiumAccess';
+import { useMessageLimits } from '../../../../hooks/useMessageLimits';
+import FutureFeatureModal from '../../../../components/FutureFeatureModal';
 
 const ChatInterface = ({
                            chatStarted,
@@ -26,15 +29,15 @@ const ChatInterface = ({
     const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
     const [suggestedQuestions, setSuggestedQuestions] = useState([]);
     const [questionsLoading, setQuestionsLoading] = useState(false);
-
-    // ✅ NUEVOS ESTADOS PARA SEARCH TYPE Y FILTROS
     const [searchType, setSearchType] = useState('standard');
     const [showFilterModal, setShowFilterModal] = useState(false);
     const [activeFilters, setActiveFilters] = useState({});
-
-    // Estados existentes...
     const [currentConversationId, setCurrentConversationId] = useState(null);
     const [conversationsLoading, setConversationsLoading] = useState(false);
+    const [showFutureModal, setShowFutureModal] = useState(false);
+    const [futureFeatureType, setFutureFeatureType] = useState('attachment');
+    const [showLimitWarning, setShowLimitWarning] = useState(false);
+
 
     const messagesEndRef = useRef(null);
     const textareaRef = useRef(null);
@@ -43,6 +46,18 @@ const ChatInterface = ({
 
     const { post, get } = useApi();
     const { startStream, stopStream, isStreaming } = useSSEStream();
+    const { isPremium } = usePremiumAccess();
+    const {
+        canSendMessage,
+        getRemainingMessages,
+        incrementUsage,
+        refreshLimits,
+        userType,
+        userLimits,        // ✅ NECESARIO para las barras de progreso
+        usageCount,        // ✅ NECESARIO para mostrar uso actual
+        resetInfo,         // ✅ NECESARIO para mostrar días hasta reset
+        loading: limitsLoading
+    } = useMessageLimits();
 
     // ✅ FUNCIÓN PARA VERIFICAR SI HAY FILTROS ACTIVOS
     const hasActiveFilters = useCallback(() => {
@@ -51,28 +66,10 @@ const ChatInterface = ({
                 if (Array.isArray(value)) return value.length > 0;
                 if (typeof value === 'boolean') return value;
                 if (typeof value === 'string') return value !== '';
-                if (typeof value === 'number') return true;
-                return false;
+                return typeof value === 'number';
+
             });
     }, [activeFilters]);
-
-    // ✅ FUNCIÓN PARA APLICAR FILTROS
-    const handleApplyFilters = useCallback((filters) => {
-        setActiveFilters(filters);
-        console.log('🔧 Filtros aplicados:', filters);
-    }, []);
-
-    // ✅ FUNCIÓN PARA CAMBIAR TIPO DE BÚSQUEDA
-    const handleSearchTypeChange = useCallback((type) => {
-        setSearchType(type);
-        console.log('🔍 Tipo de búsqueda cambiado a:', type);
-    }, []);
-
-    // Función para generar IDs únicos
-    let messageIdCounter = 0;
-    const generateUniqueId = () => {
-        return `msg_${Date.now()}_${++messageIdCounter}_${Math.random().toString(36).substr(2, 9)}`;
-    };
 
     // ✅ FUNCIÓN HANDLESUBMIT ACTUALIZADA CON FILTROS Y SEARCH TYPE
     const handleSubmit = useCallback(async (e, customText = null) => {
@@ -83,6 +80,15 @@ const ChatInterface = ({
             console.error('❌ Envío bloqueado - input vacío o cargando');
             return;
         }
+
+        if (!canSendMessage(searchType)) {
+            setShowLimitWarning(true);
+            setTimeout(() => setShowLimitWarning(false), 3000);
+            return;
+        }
+
+        // ✅ INCREMENTAR USO LOCAL INMEDIATAMENTE
+        incrementUsage(searchType);
 
         const userMessage = {
             id: generateUniqueId(),
@@ -109,19 +115,16 @@ const ChatInterface = ({
                 ...(hasActiveFilters() && { filters: activeFilters })
             };
 
-            console.log('📤 Enviando request:', requestData);
-
             const response = await post('medchat/ask', requestData);
-
-            console.log(response)
-            debugger
             if (response.success) {
                 const aiResponse = response.data.data.data.answer;
                 const pubmedArticles = response.data.data.data.pubmed_articles || [];
                 const conversationId = response.data.data.conversation_id;
                 const usageInfo = response.data.usage_info || {};
 
-                console.log('📊 Información de uso:', usageInfo);
+                setTimeout(() => {
+                    refreshLimits();
+                }, 2000);
 
                 if (!currentConversationId && conversationId) {
                     setCurrentConversationId(conversationId);
@@ -200,7 +203,7 @@ const ChatInterface = ({
         } catch (error) {
             console.error('💥 Error completo:', error);
             setIsLoading(false);
-
+            incrementUsage(searchType, -1);
             const errorMessage = {
                 id: generateUniqueId(),
                 type: 'ai',
@@ -212,7 +215,26 @@ const ChatInterface = ({
             setMessages(prev => [...prev, errorMessage]);
             setError('Error de conexión');
         }
-    }, [inputValue, isLoading, currentConversationId, searchType, activeFilters, hasActiveFilters, post, setChatStarted, setMessages]);
+    }, [inputValue, isLoading, currentConversationId, searchType, activeFilters, hasActiveFilters, post, setChatStarted, setMessages, canSendMessage, incrementUsage]);
+
+
+    // ✅ FUNCIÓN PARA APLICAR FILTROS
+    const handleApplyFilters = useCallback((filters) => {
+        setActiveFilters(filters);
+        console.log('🔧 Filtros aplicados:', filters);
+    }, []);
+
+    // ✅ FUNCIÓN PARA CAMBIAR TIPO DE BÚSQUEDA
+    const handleSearchTypeChange = useCallback((type) => {
+        setSearchType(type);
+        console.log('🔍 Tipo de búsqueda cambiado a:', type);
+    }, []);
+
+    // Función para generar IDs únicos
+    let messageIdCounter = 0;
+    const generateUniqueId = () => {
+        return `msg_${Date.now()}_${++messageIdCounter}_${Math.random().toString(36).substr(2, 9)}`;
+    };
 
     // ✅ FUNCIÓN PARA CARGAR CONVERSACIÓN ESPECÍFICA
     const loadConversation = useCallback(async (conversationId) => {
@@ -339,7 +361,6 @@ const ChatInterface = ({
         fetchBestQuestions();
     }, [setChatStarted, setMessages, fetchBestQuestions]);
 
-
     // ✅ OTRAS FUNCIONES (sin cambios)
     const handleKeyPress = useCallback((e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -360,6 +381,22 @@ const ChatInterface = ({
         setIsUserScrolling(false);
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, []);
+
+    const handleFilterClick = () => {
+        if (!isPremium) {
+            // Mostrar modal de upgrade a premium
+            alert('Los filtros avanzados son una función exclusiva para usuarios PRO. ¡Actualiza tu cuenta para acceder!');
+            return;
+        }
+        setShowFilterModal(true);
+    };
+
+    const handleFutureFeature = (type) => {
+        setFutureFeatureType(type);
+        setShowFutureModal(true);
+    };
+
+
 
     // ✅ EFFECTS
     useEffect(() => {
@@ -461,6 +498,24 @@ const ChatInterface = ({
                 </div>
             )}
 
+            {showLimitWarning && (
+                <div className="mx-6 mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center space-x-2">
+                    <AlertCircle className="w-5 h-5 text-yellow-600" />
+                    <div className="flex-1">
+                        <p className="text-sm text-yellow-800">
+                            <strong>Límite alcanzado:</strong> Has usado todos tus mensajes {searchType} por hoy.
+                            {userType === 'normal' && (
+                                <span className="ml-1">
+                                    <a href="/premium" className="text-blue-600 hover:underline">
+                                        Actualiza a PRO para mensajes ilimitados
+                                    </a>
+                                </span>
+                            )}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Error display */}
             {error && (
                 <div className="bg-red-50 border-l-4 border-red-400 p-4 mx-4 mt-4">
@@ -530,47 +585,109 @@ const ChatInterface = ({
 
             {/* Input area */}
             <div className="bg-white border-t p-4">
-                <form onSubmit={handleSubmit} className="flex items-end space-x-3">
-                    {/* Search Type Selector y Filter Button */}
-                    <SearchTypeSelector
-                        selectedType={searchType}
-                        onTypeChange={handleSearchTypeChange}
-                        onFilterClick={() => setShowFilterModal(true)}
-                        hasActiveFilters={hasActiveFilters()}
-                    />
-
-                    {/* Text input */}
-                    <div className="flex-1">
-                        <textarea
-                            ref={textareaRef}
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="Escribe tu pregunta médica aquí..."
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            rows="1"
-                            style={{ minHeight: '48px', maxHeight: '120px' }}
-                            disabled={isLoading}
+                <div className="p-6 border-t bg-white">
+                    {/* ✅ CONTADOR DE MENSAJES RESTANTES */}
+                    {userType === 'premium' || userType === 'admin' ? (
+                        <div className="flex items-center justify-center space-x-4 text-xs">
+                <span className="text-green-600 font-medium flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    Usuario {userType === 'admin' ? 'Admin' : 'Premium'}
+                </span>
+                            {getRemainingMessages(searchType) === -1 ? (
+                                <span className="text-blue-600">
+                        Mensajes {searchType}: <strong>Ilimitados</strong>
+                    </span>
+                            ) : (
+                                <span className="text-blue-600">
+                        Mensajes {searchType}: <strong>{getRemainingMessages(searchType)} restantes</strong>
+                    </span>
+                            )}
+                            {resetInfo && (
+                                <span className="text-gray-500">
+                        Reset: {resetInfo.days_until_reset} días
+                    </span>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center space-x-4 text-xs">
+                <span className="text-orange-600 font-medium flex items-center">
+                    <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
+                    Usuario Normal
+                </span>
+                            <span className="text-gray-600">
+                    Mensajes {searchType}: <strong>{getRemainingMessages(searchType)} restantes</strong>
+                </span>
+                            {resetInfo && (
+                                <span className="text-gray-500">
+                        Reset: {resetInfo.days_until_reset} días
+                    </span>
+                            )}
+                        </div>
+                    )}
+                    <form onSubmit={handleSubmit} className="flex items-end space-x-3">
+                        {/* Search Type Selector y Filter Button */}
+                        <SearchTypeSelector
+                            selectedType={searchType}
+                            onTypeChange={handleSearchTypeChange}
+                            onFilterClick={() => setShowFilterModal(true)}
+                            hasActiveFilters={hasActiveFilters()}
                         />
-                    </div>
 
-                    {/* Send button */}
-                    <button
-                        type="submit"
-                        disabled={!inputValue.trim() || isLoading}
-                        className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
-                    >
-                        <Send size={20} />
-                    </button>
-                </form>
+                        {/* Text input */}
+                        <div className="flex-1">
+                            <textarea
+                                ref={textareaRef}
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                placeholder="Escribe tu pregunta médica aquí..."
+                                className="w-full border border-gray-300 rounded-lg px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                rows="1"
+                                style={{ minHeight: '48px', maxHeight: '120px' }}
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        {/* Send button */}
+                        <button
+                            type="button"
+                            onClick={() => handleFutureFeature('attachment')}
+                            className="flex-shrink-0 p-3 text-gray-400 hover:text-gray-600 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
+                            title="Adjuntar archivo (Próximamente)"
+                        >
+                            <Paperclip className="w-5 h-5" />
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={!inputValue.trim() || isLoading}
+                            className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
+                        >
+                            <Send size={20} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleFutureFeature('voice')}
+                            className="flex-shrink-0 p-3 text-gray-400 hover:text-gray-600 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
+                            title="Mensaje de voz (Próximamente)"
+                        >
+                            <Mic className="w-5 h-5" />
+                        </button>
+                    </form>
+                </div>
             </div>
 
-            {/* Filter Modal */}
+            {/* ✅ MODALES */}
             <FilterModal
                 isOpen={showFilterModal}
                 onClose={() => setShowFilterModal(false)}
                 onApplyFilters={handleApplyFilters}
-                currentFilters={activeFilters}
+                initialFilters={activeFilters}
+            />
+
+            <FutureFeatureModal
+                isOpen={showFutureModal}
+                onClose={() => setShowFutureModal(false)}
+                featureType={futureFeatureType}
             />
         </div>
     );
