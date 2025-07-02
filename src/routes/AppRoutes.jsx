@@ -11,8 +11,10 @@ import VerifyEmail from '../pages/Domains/User/VerifyEmail';
 // Páginas principales
 import Dashboard from '../pages/Domains/User/Dashboard';
 import MedFlash from '../pages/Domains/MedFlash/MedFlash';
+import Exam from '../pages/Domains/MedBank/Exam';
 import Game from '../pages/Domains/MedFlash/Game';
 import FinishGame from '../pages/Domains/MedFlash/FinishGame';
+import MedBank from '../pages/Domains/MedBank/MedBank';
 
 // Layout
 import MainLayout from '../components/templates/MainLayout';
@@ -60,11 +62,24 @@ export default function AppRoutes() {
                 </MainLayout>
             } />
 
-            <Route path="/medchat" element={
+            <Route path="/doctor-mbs" element={
                 <MainLayout>
                     <MedChat/>
                 </MainLayout>
             } />
+
+            <Route path="/medbank" element={
+                <MainLayout>
+                    <MedBank/>
+                </MainLayout>
+            } />
+
+            <Route path="/medbank/:examId" element={
+                <MainLayout>
+                    <Exam />
+                </MainLayout>
+            } />
+
 
             {/* Ruta por defecto */}
             <Route path="*" element={<NotFound />} />

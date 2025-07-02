@@ -78,8 +78,8 @@ export default function NavBar() {
 
         // Agregar items según roles
         if (isPro || isAdmin || isRoot) {
-            menuItems.push({ name: 'MedBank', path: '/medbanks', icon: '📚' });
-            menuItems.push({ name: 'MedChat', path: '/medchat', icon: '💬' });
+            menuItems.push({ name: 'MedBank', path: '/medbank', icon: '📚' });
+            menuItems.push({ name: 'DoctorMBS', path: '/doctor-mbs', icon: '💬' });
         }
 
         // TODO: ADMINISTRACION MENU

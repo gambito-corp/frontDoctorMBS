@@ -1,17 +1,33 @@
-/* Animaciones personalizadas */
+/* ============================================
+   ANIMACIONES Y EFECTOS GLOBALES
+   ============================================ */
+
 @keyframes blob {
-    0% {
-        transform: translate(0px, 0px) scale(1);
-    }
-    33% {
-        transform: translate(30px, -50px) scale(1.1);
-    }
-    66% {
-        transform: translate(-20px, 20px) scale(0.9);
-    }
-    100% {
-        transform: translate(0px, 0px) scale(1);
-    }
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
 }
 
 .animate-blob {
@@ -26,12 +42,14 @@
     animation-delay: 4s;
 }
 
-/* Transiciones suaves para el backdrop blur */
+/* ============================================
+   UTILIDADES GLOBALES
+   ============================================ */
+
 .backdrop-blur-sm {
     backdrop-filter: blur(4px);
 }
 
-/* Mejoras visuales */
 .bg-white\/60 {
     background-color: rgba(255, 255, 255, 0.6);
 }
@@ -46,4 +64,451 @@
 
 .bg-indigo-50\/50 {
     background-color: rgba(238, 242, 255, 0.5);
+}
+
+.required {
+    color: #e74c3c;
+    margin-left: 4px;
+}
+
+.input-help {
+    color: #6c757d;
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* ============================================
+   COMPONENTES DE FORMULARIO
+   ============================================ */
+
+/* Input de Número de Preguntas */
+.num-questions-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.num-questions-section label {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.num-questions-input {
+    width: 100%;
+    max-width: 200px;
+    padding: 12px 16px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: #fff;
+    transition: all 0.3s ease;
+}
+
+.num-questions-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.num-questions-input:disabled {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Inputs y Selects Generales */
+.form-input,
+.form-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: #fff;
+    transition: all 0.3s ease;
+}
+
+.form-input:focus,
+.form-select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-input:disabled,
+.form-select:disabled {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+/* ============================================
+   COMPONENTES PDF
+   ============================================ */
+
+.pdf-content-section label small {
+    display: block;
+    font-weight: normal;
+    color: #6c757d;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+/* ============================================
+   INDICADOR DE PROGRESO
+   ============================================ */
+
+.progress-info {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.progress-text {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #007bff;
+    transition: width 0.3s ease;
+}
+
+/* ============================================
+   RESUMEN DE CONFIGURACIONES
+   ============================================ */
+
+.configuration-summary {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.summary-stats {
+    display: flex;
+    gap: 15px;
+    font-size: 14px;
+}
+
+.config-count {
+    background-color: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.question-count {
+    background-color: #28a745;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.configurations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.config-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.config-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.config-number {
+    background-color: #6c757d;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.config-details {
+    flex: 1;
+}
+
+.config-main {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.config-meta {
+    font-size: 12px;
+    color: #666;
+}
+
+.remove-config-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.remove-config-button:hover {
+    background-color: #f8d7da;
+}
+
+/* ============================================
+   BOTONES
+   ============================================ */
+
+/* Botones de Acción */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Botón Agregar Configuración */
+.add-config-button {
+    background-color: #17a2b8;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.add-config-button:hover:not(:disabled) {
+    background-color: #138496;
+}
+
+/* Botón Generar Examen - Modo Normal */
+.generate-button.normal-mode {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 16px 24px;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.generate-button.normal-mode:hover:not(:disabled) {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Botón Generar Examen - Modo Mixto */
+.generate-button.mixed-mode {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 16px 24px;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.generate-button.mixed-mode:hover:not(:disabled) {
+    background-color: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+/* Estados Deshabilitados */
+.generate-button:disabled,
+.add-config-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ============================================
+   MENSAJES Y ALERTAS
+   ============================================ */
+
+/* Información de Límites */
+.limits-info {
+    background-color: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 20px;
+    color: #1565c0;
+}
+
+.limits-info p {
+    margin: 4px 0;
+}
+
+.limits-info p:last-child {
+    font-weight: bold;
+    color: #007bff;
+}
+
+/* Advertencia de Dificultad */
+.difficulty-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+/* Mensaje de Advertencia General */
+.warning-message {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+/* Información de Configuración Actual */
+.current-config-info {
+    background-color: #d1ecf1;
+    border: 1px solid #bee5eb;
+    color: #0c5460;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 15px;
+    text-align: center;
+    font-size: 14px;
+}
+
+/* ============================================
+   INFORMACIÓN DE MODO
+   ============================================ */
+
+.mode-info {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.mixed-info {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.normal-info {
+    background-color: #e3f2fd;
+    border: 1px solid #bbdefb;
+    color: #1565c0;
+}
+
+/* ============================================
+   COMPONENTES DE CARGA Y ESTADOS
+   ============================================ */
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+}
+
+.empty-state small {
+    display: block;
+    margin-top: 8px;
+    color: #999;
+}
+
+.error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: #dc3545;
+}
+
+.retry-button {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 16px;
+    transition: background-color 0.3s;
+}
+
+.retry-button:hover {
+    background-color: #c82333;
 }

@@ -100,14 +100,14 @@ export default function Dashboard() {
                     title="MedBank"
                     description="Banco de preguntas médicas"
                     icon="📚"
-                    route="/medbanks"
+                    route="/medbank"
                     color="green"
                 />
                 <DashboardAccessCard
-                    title="MedChat"
+                    title="DoctorMBS"
                     description="Chat inteligente médico"
                     icon="💬"
-                    route="/medchat"
+                    route="/doctor-mbs"
                     color="purple"
                 />
             </div>
