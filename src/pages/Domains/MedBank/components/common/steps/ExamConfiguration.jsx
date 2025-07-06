@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../../../../../hooks/useApi';
+import { usePremiumAccess } from '../../../../../../hooks/usePremiumAccess';
 import DifficultySelect from '../DifficultySelect/DifficultySelect';
 import PremiumModal from '../../../../../../components/PremiumModal';
 
@@ -29,6 +30,7 @@ const ExamConfiguration = ({
     const [examError, setExamError] = useState(null);
     const [generatingExam, setGeneratingExam] = useState(false);
     const navigate = useNavigate();
+    const isPremium = usePremiumAccess();
     const { get, post } = useApi();
 
     useEffect(() => {
@@ -168,19 +170,19 @@ const ExamConfiguration = ({
 
     const handleGenerateExam = async () => {
         setExamError(null);
+        let letAcces = false;
 
-        let isPremium = false; // Aquí deberías usar tu hook o lógica para verificar si el usuario es premium
-        // Verifica si el usuario es premium
         if (typeof window !== 'undefined') {
-            const userData = localStorage.getItem('user');
+            const userData = isPremium.user
             if (userData) {
                 try {
                     const parsedUser = JSON.parse(userData);
-                    isPremium = parsedUser.is_pro === true || parsedUser.is_pro === 1;
-                    if (!isPremium) {
-                        const hasRootRole = parsedUser.roles && parsedUser.roles.includes('root');
-                        const hasRectorRole = parsedUser.roles && parsedUser.roles.includes('rector');
-                        isPremium = hasRootRole || hasRectorRole;
+                    // 1. Si pagó (is_pro === true o 1)
+                    letAcces = parsedUser.is_pro === true || parsedUser.is_pro === 1;
+                    // 2. Si no pagó, pero tiene rol especial
+                    if (!letAcces) {
+                        const roles = parsedUser.roles || [];
+                        letAcces = roles.includes('root') || roles.includes('rector') || roles.includes('student');
                     }
                 } catch (error) {
                     console.error('Error parsing user data:', error);
@@ -190,7 +192,7 @@ const ExamConfiguration = ({
 
         // Limite para usuarios no premium
         const totalQuestionsForButton = isMixedMode ? totalWithCurrent : currentConfigQuestions;
-        if (!isPremium && totalQuestionsForButton > 10) {
+        if (!letAcces && totalQuestionsForButton > 10) {
             setShowPremiumModal(true);
             return;
         }
