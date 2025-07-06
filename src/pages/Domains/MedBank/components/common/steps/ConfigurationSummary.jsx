@@ -1,4 +1,4 @@
-// src/pages/Domains/MedBank/components/StandardExamConfig/steps/ConfigurationSummary.jsx
+// src/pages/Domains/MedBank/components/TypesExamConfig/steps/ConfigurationSummary.jsx
 import React from 'react';
 
 const ConfigurationSummary = ({ configurations, totalQuestions, onRemoveConfiguration }) => {

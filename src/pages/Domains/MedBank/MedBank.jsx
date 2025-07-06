@@ -1,9 +1,11 @@
 // src/pages/Domains/MedBank/MedBank.jsx
 import React, { useState } from 'react';
-import ExamTypeSelector from './components/ExamTypeSelector';
-import ExamConfigContainer from './components/StandardExamConfig/ExamConfigContainer';
-import StandardExamConfig from './components/StandardExamConfig/StandardExamConfig';
-import PdfExamConfig from './components/PdfExamConfig/PdfExamConfig'; // Nueva importación
+import MedBankTypeSelector from './components/MedBankTypeSelector';
+import StandardExamConfig from './ExamTypes/StandardExamConfig';
+import AIExamConfig from './ExamTypes/AIExamConfig';
+import PdfExamConfig from './ExamTypes/PdfExamConfig'; // Nueva importación
+import PersonalFailedExamConfig from './ExamTypes/PersonalFailedExamConfig'; // Nueva importación
+import GlobalFailedExamConfig from './ExamTypes/GlobalFailedExamConfig'; // Nueva importación
 import { useApi } from '../../../hooks/useApi';
 
 const MedBank = () => {
@@ -29,90 +31,32 @@ const MedBank = () => {
     const fetchExamConfigData = async (examType) => {
         try {
             switch(examType.id) {
-                case 1: // Banco de Preguntas Estándar
-                    console.log('📚 Cargando configuración para Banco de Preguntas Estándar');
-                    /**
-                     * TODO: Crear endpoint para obtener áreas, categorías, tipos y universidades
-                     * GET /api/exam-config/standard
-                     * Respuesta esperada: {
-                     *   areas: [...],
-                     *   categories: [...],
-                     *   tipos: [...],
-                     *   universities: [...]
-                     * }
-                     */
+                case 1:
                     const standardResult = await get('medbank/areas?type=standard');
                     if (standardResult.success) {
                         setExamConfigData(standardResult.data);
                     }
                     break;
-
-                case 2: // Examen Por IA
-                    console.log('🤖 Cargando configuración para Examen Por IA');
-                    /**
-                     * TODO: Crear endpoint para obtener temas disponibles para IA
-                     * GET /api/exam-config/ai-topics
-                     * Respuesta esperada: {
-                     *   topics: [...],
-                     *   max_questions: 50,
-                     *   available_models: [...]
-                     * }
-                     */
-                    const aiResult = await get('/api/exam-config/ai-topics');
+                case 2:
+                    const aiResult = await get('medbank/areas?type=ai');
                     if (aiResult.success) {
                         setExamConfigData(aiResult.data);
                     }
                     break;
 
-                case 3: // Examen desde PDF
-                    console.log('📄 Cargando configuración para Examen desde PDF');
-                    /**
-                     * TODO: Crear endpoint para obtener configuración de PDF
-                     * GET /api/exam-config/pdf-settings
-                     * Respuesta esperada: {
-                     *   max_file_size: 10485760,
-                     *   allowed_formats: ['pdf'],
-                     *   max_questions: 50,
-                     *   processing_time_estimate: '2-5 minutos'
-                     * }
-                     */
-                    console.log('📄 Cargando configuración para Examen desde PDF');
-                    // Para PDF no necesitamos cargar datos adicionales
-                    // El componente PdfExamConfig manejará sus propias llamadas API
+                case 3:
                     setExamConfigData({ type: 'pdf' });
                     break;
 
-                case 4: // Preguntas Más Falladas por Ti
-                    console.log('🎯 Cargando preguntas más falladas por el usuario');
-                    /**
-                     * TODO: Crear endpoint para obtener estadísticas personales del usuario
-                     * GET /api/exam-config/personal-failed-questions
-                     * Respuesta esperada: {
-                     *   failed_areas: [...],
-                     *   failed_categories: [...],
-                     *   total_failed_questions: 150,
-                     *   recommendations: [...]
-                     * }
-                     */
-                    const personalResult = await get('/api/exam-config/personal-failed-questions');
+                case 4:
+                    const personalResult = await get('medbank/areas?type=personal-failed');
                     if (personalResult.success) {
                         setExamConfigData(personalResult.data);
                     }
                     break;
 
-                case 5: // Preguntas Más Falladas por la Comunidad
-                    console.log('👥 Cargando preguntas más falladas por la comunidad');
-                    /**
-                     * TODO: Crear endpoint para obtener estadísticas de la comunidad
-                     * GET /api/exam-config/community-failed-questions
-                     * Respuesta esperada: {
-                     *   community_failed_areas: [...],
-                     *   community_failed_categories: [...],
-                     *   total_users_data: 1250,
-                     *   trending_topics: [...]
-                     * }
-                     */
-                    const communityResult = await get('/api/exam-config/community-failed-questions');
+                case 5:
+                    const communityResult = await get('medbank/areas?type=global-failed');
                     if (communityResult.success) {
                         setExamConfigData(communityResult.data);
                     }
@@ -156,6 +100,14 @@ const MedBank = () => {
     if (selectedExamType && selectedExamType.id === 1 && examConfigData) {
         return (
             <StandardExamConfig
+                examType={selectedExamType}
+                onBack={handleBackToSelection}
+            />
+        );
+    }
+    if (selectedExamType && selectedExamType.id === 2 && examConfigData) {
+        return (
+            <AIExamConfig
                 onBack={handleBackToSelection}
             />
         );
@@ -167,15 +119,25 @@ const MedBank = () => {
             />
         );
     }
+    if (selectedExamType && selectedExamType.id === 4 && examConfigData) {
+        return (
+            <PersonalFailedExamConfig
+                onBack={handleBackToSelection}
+            />
+        );
+    }
+    if (selectedExamType && selectedExamType.id === 5 && examConfigData) {
+        return (
+            <GlobalFailedExamConfig
+                onBack={handleBackToSelection}
+            />
+        );
+    }
 
     // Tu renderizado existente para otros tipos de examen
     if (selectedExamType && examConfigData) {
         return (
-            <ExamConfigContainer
-                examType={selectedExamType}
-                configData={examConfigData}
-                onBack={handleBackToSelection}
-            />
+            <>INVALIDOOOOOOOO</>
         );
     }
 
@@ -218,14 +180,8 @@ const MedBank = () => {
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {!selectedExamType ? (
-                    <ExamTypeSelector onExamTypeSelect={handleExamTypeSelect} />
-                ) : (
-                    <ExamConfigContainer
-                        examType={selectedExamType}
-                        examConfigData={examConfigData}
-                        onBackToSelection={handleBackToSelection}
-                    />
-                )}
+                    <MedBankTypeSelector onExamTypeSelect={handleExamTypeSelect} />
+                ):(<></>)}
             </div>
         </div>
     );

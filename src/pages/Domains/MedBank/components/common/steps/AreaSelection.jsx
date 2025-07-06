@@ -1,8 +1,8 @@
-// src/pages/Domains/MedBank/components/StandardExamConfig/steps/AreaSelection.jsx
+// src/pages/Domains/MedBank/components/TypesExamConfig/steps/AreaSelection.jsx
 import React, { useState, useEffect } from 'react';
 import { useApi } from '../../../../../../hooks/useApi';
 
-const AreaSelection = ({ selectedArea, onAreaSelect, onAutoAdvance }) => {
+const AreaSelection = ({ selectedArea, onAreaSelect, onAutoAdvance, type }) => {
     const [areas, setAreas] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -18,7 +18,7 @@ const AreaSelection = ({ selectedArea, onAreaSelect, onAutoAdvance }) => {
         setLoading(true);
         setError(null);
         try {
-            const result = await get('medbank/areas?type=standard');
+            const result = await get(`medbank/areas?type=${type}`);
             if (result?.success && result?.data?.data && Array.isArray(result.data.data)) {
                 setAreas(result.data.data);
             } else {
@@ -74,8 +74,14 @@ const AreaSelection = ({ selectedArea, onAreaSelect, onAutoAdvance }) => {
         <div className="selection-container">
             <div className="selection-grid-compact">
                 {areas
-                    .filter(area => area.questions_count > 0)
-                    .map((area) => (
+                    .filter(area => {
+                        // Si el tipo requiere filtro, aplica el filtro, si no, muestra todas
+                        if (['standard', 'personal-failed', 'global-failed'].includes(type)) {
+                            return area.questions_count > 0;
+                        }
+                        return true; // Para "ai" y otros tipos, muestra todas las áreas
+                    })
+                    .map(area => (
                         <div
                             key={area.id}
                             className={`selection-card-compact ${
@@ -87,9 +93,11 @@ const AreaSelection = ({ selectedArea, onAreaSelect, onAutoAdvance }) => {
                             {area.description && (
                                 <p className="card-description-compact">{area.description}</p>
                             )}
-                            <div className="question-count-badge">
-                                {area.questions_count} pregunta{area.questions_count !== 1 ? 's' : ''}
-                            </div>
+                            {typeof area.questions_count !== 'undefined' && (
+                                <div className="question-count-badge">
+                                    {area.questions_count} pregunta{area.questions_count !== 1 ? 's' : ''}
+                                </div>
+                            )}
                             {selectedArea?.id === area.id && (
                                 <div className="selected-indicator-compact">✓</div>
                             )}

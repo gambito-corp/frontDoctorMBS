@@ -1,8 +1,9 @@
 // src/pages/Domains/MedBank/components/PdfExamConfig/PdfExamConfig.jsx
 import React, { useState } from 'react';
-import { useApi } from '../../../../../hooks/useApi';
-import DifficultySelect from '../DifficultySelect/DifficultySelect';
-import '../../MedBank.css';
+import { useNavigate } from 'react-router-dom';
+import { useApi } from '../../../../hooks/useApi';
+import DifficultySelect from '../components/common/DifficultySelect/DifficultySelect';
+import '../MedBank.css';
 
 const PdfExamConfig = ({ onBack }) => {
     const [selectedFile, setSelectedFile] = useState(null);
@@ -11,8 +12,10 @@ const PdfExamConfig = ({ onBack }) => {
     const [selectedDifficultyData, setSelectedDifficultyData] = useState(null);
     const [numQuestions, setNumQuestions] = useState(10); // Nuevo estado
     const [isProcessing, setIsProcessing] = useState(false);
+    const [duration, setDuration] = useState(60);
 
     const { post, loading, error } = useApi();
+    const navigate = useNavigate();
 
     const handleFileChange = async (event) => {
         const file = event.target.files?.[0];
@@ -89,30 +92,21 @@ const PdfExamConfig = ({ onBack }) => {
 
         try {
             const formData = new FormData();
-            formData.append('pdf', selectedFile);
+            formData.append('pdf_file', selectedFile);
             formData.append('difficulty', selectedDifficulty);
             formData.append('num_questions', numQuestions.toString());
             formData.append('pdf_content', pdfContent);
+            formData.append('duration', 60); // Duración en minutos, puedes ajustar esto según tus necesidades
 
-            console.log('📤 Generando examen...', {
-                fileName: selectedFile.name,
-                difficulty: selectedDifficulty,
-                numQuestions,
-                contentLength: pdfContent.length
-            });
-
-            const result = await post('medbank/process-pdf-exam', formData, {
+            const result = await post('medbank/generate-exam/pdf', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             });
 
-            console.log('📥 Respuesta del examen:', result);
-
             if (result?.success) {
-                console.log('✅ Examen generado exitosamente:', result.data);
-                // Aquí puedes redirigir al examen o mostrar los resultados
-                alert(`¡Examen generado exitosamente con ${result.data?.exam?.data?.questions?.length || numQuestions} preguntas!`);
+                const examId = result.data.data.exam_id;
+                navigate(`/medbank/${examId}`);
             } else {
                 throw new Error(result?.message || 'Error al generar examen');
             }
@@ -158,24 +152,49 @@ const PdfExamConfig = ({ onBack }) => {
                 </div>
 
                 {/* Input para número de preguntas */}
-                <div className="num-questions-section">
-                    <label htmlFor="num-questions">
-                        Número de preguntas <span className="required">*</span>
-                    </label>
-                    <input
-                        id="num-questions"
-                        type="number"
-                        min="1"
-                        max="200"
-                        value={numQuestions}
-                        onChange={handleNumQuestionsChange}
-                        className="num-questions-input"
-                        disabled={loading || isProcessing}
-                    />
-                    <small className="input-help">
-                        Mínimo 1, máximo 200 preguntas
-                    </small>
+                <div className="exam-config-row">
+                    <div className="form-group">
+                        <label htmlFor="num-questions">
+                            Número de preguntas <span className="required">*</span>
+                        </label>
+                        <input
+                            id="num-questions"
+                            type="number"
+                            min="1"
+                            max="200"
+                            value={numQuestions}
+                            onChange={handleNumQuestionsChange}
+                            className="num-questions-input"
+                            disabled={loading || isProcessing}
+                        />
+                        <small className="input-help">
+                            Mínimo 1, máximo 200 preguntas
+                        </small>
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="exam-duration">
+                            Duración del examen (minutos) <span className="required">*</span>
+                        </label>
+                        <input
+                            id="exam-duration"
+                            type="number"
+                            min="1"
+                            max="300"
+                            value={duration}
+                            onChange={e => {
+                                const value = parseInt(e.target.value) || 1;
+                                setDuration(Math.min(Math.max(value, 1), 300));
+                            }}
+                            className="duration-input"
+                            disabled={loading || isProcessing}
+                        />
+                        <small className="input-help">
+                            Mínimo 1, máximo 300 minutos
+                        </small>
+                    </div>
                 </div>
+
 
                 {/* Componente Select de Dificultades */}
                 <DifficultySelect
@@ -187,7 +206,6 @@ const PdfExamConfig = ({ onBack }) => {
                     required={true}
                     className="pdf-difficulty-section"
                 />
-
                 {/* Textarea para mostrar contenido del PDF */}
                 <div className="pdf-content-section">
                     <label htmlFor="pdf-content">
@@ -220,7 +238,7 @@ const PdfExamConfig = ({ onBack }) => {
                         className="generate-exam-button"
                     >
                         {isProcessing ? 'Generando Examen...' :
-                            `Generar ${numQuestions} Pregunta${numQuestions !== 1 ? 's' : ''} ${selectedDifficultyData?.name || ''}`}
+                            `Generar ${numQuestions} Pregunta${numQuestions !== 1 ? 's' : ''} ${selectedDifficultyData?.name || ''} (${duration} min)`}
                     </button>
                 </div>
 

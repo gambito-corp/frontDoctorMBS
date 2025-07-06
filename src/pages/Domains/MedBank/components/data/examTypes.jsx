@@ -1,4 +1,3 @@
-// src/pages/Domains/MedBank/components/data/examTypes.jsx
 export const examTypesData = [
     {
         id: 1,

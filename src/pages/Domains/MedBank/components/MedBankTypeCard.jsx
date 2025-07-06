@@ -1,7 +1,7 @@
-// src/pages/Domains/MedBank/components/ExamTypeCard.jsx
+// src/pages/Domains/MedBank/components/MedBankTypeCard.jsx
 import React from 'react';
 
-const ExamTypeCard = ({ examType, onSelect }) => {
+const MedBankTypeCard = ({ examType, onSelect }) => {
     return (
         <div
             onClick={() => onSelect(examType)}
@@ -29,4 +29,4 @@ const ExamTypeCard = ({ examType, onSelect }) => {
     );
 };
 
-export default ExamTypeCard;
+export default MedBankTypeCard;

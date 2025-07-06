@@ -10,7 +10,6 @@ import './components/Exam/Exam.css';
 const Exam = () => {
     const { examId } = useParams();
     const navigate = useNavigate();
-    console.log('ExamId: ',examId);
     const { get, post } = useApi();
     const [exam, setExam] = useState(null);
     const [questions, setQuestions] = useState([]);
@@ -29,7 +28,7 @@ const Exam = () => {
     const [examFinished, setExamFinished] = useState(false);
     const [showResults, setShowResults] = useState(false);
     const [resultData, setResultData] = useState(null); // score, aciertos, etc.
-
+    const [isAiExam, setIsAiExam] = useState(false);
 
     useEffect(() => {
         const fetchExam = async () => {
@@ -38,7 +37,11 @@ const Exam = () => {
                 const res = await get(`medbank/exam/${examId}`);
                 if (res?.data?.success) {
                     setExam(res.data.data);
-                    setQuestions(res.data.data.questions || []);
+                    const q = res.data.data.questions && res.data.data.questions.length > 0
+                        ? res.data.data.questions
+                        : (res.data.data.ai_questions || []);
+                    setQuestions(q);
+                    setIsAiExam(!!(res.data.data.ai_questions && res.data.data.ai_questions.length > 0));
                     setTimeLeft((res.data.data.time_limit || 60) * 60);
                 } else {
                     setError('No se pudo cargar el examen');
@@ -122,16 +125,21 @@ const Exam = () => {
 
     const finalizarExamen = async () => {
         try {
+            const key = isAiExam ? 'ai_question_id' : 'question_id';
+
             const payload = {
                 exam_id: examId,
+                ai: isAiExam,
                 answers: Object.entries(answers).map(([question_id, option_id]) => ({
-                    question_id: Number(question_id),
+                    [key]: Number(question_id),
                     option_id: Number(option_id)
                 }))
             };
 
+
             const result = await post('medbank/resolve-exam', payload);
             if (result?.data?.success) {
+                console.log(result?.data);
                 setResultData(result.data.data);
                 setExamFinished(true);
             } else {

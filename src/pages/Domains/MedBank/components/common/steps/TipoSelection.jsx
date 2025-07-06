@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApi } from '../../../../../../hooks/useApi';
 
-const TipoSelection = ({ selectedTipo, onTipoSelect, selectedCategory, onAutoAdvance }) => {
+const TipoSelection = ({ selectedTipo, onTipoSelect, selectedCategory, onAutoAdvance, type }) => {
     const [tipos, setTipos] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -11,6 +11,7 @@ const TipoSelection = ({ selectedTipo, onTipoSelect, selectedCategory, onAutoAdv
         if (selectedCategory?.id) {
             loadTipos();
         }
+        // eslint-disable-next-line
     }, [selectedCategory]);
 
     const loadTipos = async () => {
@@ -18,7 +19,7 @@ const TipoSelection = ({ selectedTipo, onTipoSelect, selectedCategory, onAutoAdv
         setLoading(true);
         setError(null);
         try {
-            const result = await get(`medbank/tipos?type=standard&category_id=${selectedCategory.id}`);
+            const result = await get(`medbank/tipos?type=${type}&&category_id=${selectedCategory.id}`);
             if (result?.success && result?.data?.data && Array.isArray(result.data.data)) {
                 setTipos(result.data.data);
             } else {
@@ -39,6 +40,14 @@ const TipoSelection = ({ selectedTipo, onTipoSelect, selectedCategory, onAutoAdv
         }, 500);
     };
 
+    // Filtrado condicional según el tipo
+    const filteredTipos = tipos.filter(tipo => {
+        if (['standard', 'personal-failed', 'global-failed'].includes(type)) {
+            return tipo.questions_count > 0;
+        }
+        return true;
+    });
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -58,9 +67,6 @@ const TipoSelection = ({ selectedTipo, onTipoSelect, selectedCategory, onAutoAdv
             </div>
         );
     }
-
-    // Solo mostrar tipos con preguntas disponibles
-    const filteredTipos = tipos.filter(tipo => tipo.questions_count > 0);
 
     if (filteredTipos.length === 0) {
         return (
@@ -89,9 +95,11 @@ const TipoSelection = ({ selectedTipo, onTipoSelect, selectedCategory, onAutoAdv
                         {tipo.description && (
                             <p className="card-description-compact">{tipo.description}</p>
                         )}
-                        <div className="question-count-badge">
-                            {tipo.questions_count} pregunta{tipo.questions_count !== 1 ? 's' : ''}
-                        </div>
+                        {['standard', 'personal-failed', 'global-failed'].includes(type) && typeof tipo.questions_count !== 'undefined' && (
+                            <div className="question-count-badge">
+                                {tipo.questions_count} pregunta{tipo.questions_count !== 1 ? 's' : ''}
+                            </div>
+                        )}
                         {selectedTipo?.id === tipo.id && (
                             <div className="selected-indicator-compact">✓</div>
                         )}

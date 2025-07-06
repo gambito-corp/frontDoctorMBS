@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApi } from '../../../../../../hooks/useApi';
 
-const CategorySelection = ({ selectedCategory, onCategorySelect, selectedArea, onAutoAdvance }) => {
+const CategorySelection = ({ selectedCategory, onCategorySelect, selectedArea, onAutoAdvance, type }) => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -11,6 +11,7 @@ const CategorySelection = ({ selectedCategory, onCategorySelect, selectedArea, o
         if (selectedArea?.id) {
             loadCategories();
         }
+        // eslint-disable-next-line
     }, [selectedArea]);
 
     const loadCategories = async () => {
@@ -18,7 +19,7 @@ const CategorySelection = ({ selectedCategory, onCategorySelect, selectedArea, o
         setLoading(true);
         setError(null);
         try {
-            const result = await get(`medbank/categories?type=standard&area_id=${selectedArea.id}`);
+            const result = await get(`medbank/categories?type=${type}&area_id=${selectedArea.id}`);
             if (result?.success && result?.data?.data && Array.isArray(result.data.data)) {
                 setCategories(result.data.data);
             } else {
@@ -39,6 +40,14 @@ const CategorySelection = ({ selectedCategory, onCategorySelect, selectedArea, o
         }, 500);
     };
 
+    // Filtrado condicional según el tipo
+    const filteredCategories = categories.filter(category => {
+        if (['standard', 'personal-failed', 'global-failed'].includes(type)) {
+            return category.questions_count > 0;
+        }
+        return true;
+    });
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -58,9 +67,6 @@ const CategorySelection = ({ selectedCategory, onCategorySelect, selectedArea, o
             </div>
         );
     }
-
-    // Solo mostrar categorías con preguntas disponibles
-    const filteredCategories = categories.filter(cat => cat.questions_count > 0);
 
     if (filteredCategories.length === 0) {
         return (
@@ -89,9 +95,11 @@ const CategorySelection = ({ selectedCategory, onCategorySelect, selectedArea, o
                         {category.description && (
                             <p className="card-description-compact">{category.description}</p>
                         )}
-                        <div className="question-count-badge">
-                            {category.questions_count} pregunta{category.questions_count !== 1 ? 's' : ''}
-                        </div>
+                        {['standard', 'personal-failed', 'global-failed'].includes(type) && typeof category.questions_count !== 'undefined' && (
+                            <div className="question-count-badge">
+                                {category.questions_count} pregunta{category.questions_count !== 1 ? 's' : ''}
+                            </div>
+                        )}
                         {selectedCategory?.id === category.id && (
                             <div className="selected-indicator-compact">✓</div>
                         )}

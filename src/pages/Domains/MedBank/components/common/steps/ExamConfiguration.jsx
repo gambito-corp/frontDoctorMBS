@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../../../../../hooks/useApi';
-import DifficultySelect from '../../DifficultySelect/DifficultySelect';
+import DifficultySelect from '../DifficultySelect/DifficultySelect';
 import PremiumModal from '../../../../../../components/PremiumModal';
 
 const ExamConfiguration = ({
@@ -12,14 +12,13 @@ const ExamConfiguration = ({
                                totalQuestions,
                                canAddMore,
                                loading,
-                               isPremium
+                               type // <-- Añade esta prop
                            }) => {
     const [availableQuestions, setAvailableQuestions] = useState(null);
     const [loadingCount, setLoadingCount] = useState(false);
     const [countError, setCountError] = useState(null);
     const [examTitle, setExamTitle] = useState('Examen personalizado');
     const [examDuration, setExamDuration] = useState(60); // minutos por defecto
-
 
     const [universities, setUniversities] = useState([]);
     const [loadingUniversities, setLoadingUniversities] = useState(false);
@@ -34,23 +33,32 @@ const ExamConfiguration = ({
 
     useEffect(() => {
         loadUniversities();
+        // eslint-disable-next-line
     }, []);
 
     useEffect(() => {
-        if (formData.selectedArea && formData.selectedCategory && formData.selectedTipo) {
+        if (
+            formData.selectedArea &&
+            formData.selectedCategory &&
+            formData.selectedTipo &&
+            ['standard', 'personal-failed', 'global-failed'].includes(type) // Solo para estos tipos
+        ) {
             loadAvailableQuestionsCount();
         } else {
             setAvailableQuestions(null);
         }
-    }, [formData.selectedArea, formData.selectedCategory, formData.selectedTipo, formData.difficulty, formData.university]);
+        // eslint-disable-next-line
+    }, [formData.selectedArea, formData.selectedCategory, formData.selectedTipo, formData.difficulty, formData.university, type]);
 
     useEffect(() => {
         if (availableQuestions !== null && formData.numQuestions > availableQuestions) {
             onDataChange('numQuestions', Math.max(1, availableQuestions));
         }
+        // eslint-disable-next-line
     }, [availableQuestions, formData.numQuestions, onDataChange]);
 
     const handleTitleChange = (e) => setExamTitle(e.target.value);
+
     const handleDurationChange = (e) => {
         let val = parseInt(e.target.value) || 1;
         if (val < 1) val = 1;
@@ -91,6 +99,10 @@ const ExamConfiguration = ({
             }
             if (formData.university?.id) {
                 params.append('university_id', formData.university.id);
+            }
+
+            if (type === 'personal-failed' || type === 'global-failed') {
+                params.append('failed_type', type);
             }
 
             const result = await get(`medbank/counting-questions?${params.toString()}`);
@@ -154,9 +166,27 @@ const ExamConfiguration = ({
         return 'green';
     };
 
-    // NUEVO: Función para generar el examen y manejar la respuesta
     const handleGenerateExam = async () => {
         setExamError(null);
+
+        let isPremium = false; // Aquí deberías usar tu hook o lógica para verificar si el usuario es premium
+        // Verifica si el usuario es premium
+        if (typeof window !== 'undefined') {
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                try {
+                    const parsedUser = JSON.parse(userData);
+                    isPremium = parsedUser.is_pro === true || parsedUser.is_pro === 1;
+                    if (!isPremium) {
+                        const hasRootRole = parsedUser.roles && parsedUser.roles.includes('root');
+                        const hasRectorRole = parsedUser.roles && parsedUser.roles.includes('rector');
+                        isPremium = hasRootRole || hasRectorRole;
+                    }
+                } catch (error) {
+                    console.error('Error parsing user data:', error);
+                }
+            }
+        }
 
         // Limite para usuarios no premium
         const totalQuestionsForButton = isMixedMode ? totalWithCurrent : currentConfigQuestions;
@@ -175,12 +205,20 @@ const ExamConfiguration = ({
             return;
         }
 
-        if (availableQuestions !== null && availableQuestions === 0) {
+        if (
+            ['standard', 'personal-failed', 'global-failed'].includes(type) &&
+            availableQuestions !== null &&
+            availableQuestions === 0
+        ) {
             alert('⚠️ No hay preguntas disponibles para esta configuración.');
             return;
         }
 
-        if (availableQuestions !== null && availableQuestions < formData.numQuestions) {
+        if (
+            ['standard', 'personal-failed', 'global-failed'].includes(type) &&
+            availableQuestions !== null &&
+            availableQuestions < formData.numQuestions
+        ) {
             alert(`⚠️ Solo hay ${availableQuestions} preguntas disponibles para esta configuración.`);
             return;
         }
@@ -216,7 +254,7 @@ const ExamConfiguration = ({
 
                 payload = {
                     ...payload,
-                    mode: 'standard',
+                    mode: type,
                     current_config: configs[configs.length - 1],
                     saved_configs: configs.slice(0, -1)
                 };
@@ -224,7 +262,7 @@ const ExamConfiguration = ({
                 // MODO NORMAL
                 payload = {
                     ...payload,
-                    mode: 'standard',
+                    mode: type,
                     current_config: {
                         area_id: formData.selectedArea.id,
                         category_id: formData.selectedCategory.id,
@@ -236,9 +274,7 @@ const ExamConfiguration = ({
                 };
             }
 
-            console.log(payload);
-
-            const result = await post('medbank/generate-exam/standard', payload);
+            const result = await post(`medbank/generate-exam/${type}`, payload);
 
             if (result?.data?.success) {
                 const examId = result.data.data.exam_id;
@@ -289,7 +325,7 @@ const ExamConfiguration = ({
                         <p><strong>Configuración actual:</strong> {currentConfigQuestions} preguntas</p>
                     )}
                     <p><strong>Límite del sistema:</strong> {maxQuestionsAllowed} preguntas disponibles</p>
-                    {availableQuestions !== null && (
+                    {['standard', 'personal-failed', 'global-failed'].includes(type) && availableQuestions !== null && (
                         <p><strong>Preguntas en BD:</strong> {availableQuestions} preguntas con filtros actuales</p>
                     )}
                 </div>
@@ -346,57 +382,58 @@ const ExamConfiguration = ({
                     />
                     <small className="form-help">
                         Mínimo 1, máximo {getRealMaxQuestions()} preguntas
-                        {availableQuestions !== null && availableQuestions < maxQuestionsAllowed && (
+                        {['standard', 'personal-failed', 'global-failed'].includes(type) && availableQuestions !== null && availableQuestions < maxQuestionsAllowed && (
                             <span className="availability-note"> (limitado por disponibilidad en BD)</span>
                         )}
                     </small>
 
                     {/* Badge de preguntas disponibles */}
-                    {formData.selectedArea && formData.selectedCategory && formData.selectedTipo && (
-                        <div className="questions-badge-container">
-                            <div className={`questions-available-badge badge-${getBadgeColor()}`}>
-                                {loadingCount ? (
-                                    <span className="badge-loading">
-                                        <span className="mini-spinner"></span>
-                                        Consultando BD...
-                                    </span>
-                                ) : countError ? (
-                                    <span className="badge-error">
-                                        ❌ {countError}
-                                        <button
-                                            onClick={loadAvailableQuestionsCount}
-                                            className="retry-mini-button"
-                                        >
-                                            🔄
-                                        </button>
-                                    </span>
-                                ) : availableQuestions !== null ? (
-                                    <span className="badge-content">
-                                        <span className="badge-icon">📊</span>
-                                        <span className="badge-text">
-                                            {availableQuestions} pregunta{availableQuestions !== 1 ? 's' : ''} en BD
+                    {['standard', 'personal-failed', 'global-failed'].includes(type) &&
+                        formData.selectedArea && formData.selectedCategory && formData.selectedTipo && (
+                            <div className="questions-badge-container">
+                                <div className={`questions-available-badge badge-${getBadgeColor()}`}>
+                                    {loadingCount ? (
+                                        <span className="badge-loading">
+                                            <span className="mini-spinner"></span>
+                                            Consultando BD...
                                         </span>
-                                    </span>
-                                ) : null}
-                            </div>
-
-                            {/* Información adicional */}
-                            {availableQuestions !== null && !loadingCount && (
-                                <div className="badge-info">
-                                    <span>Filtros aplicados:</span>
-                                    {formData.difficulty && (
-                                        <span> Dificultad: {formData.difficulty}</span>
-                                    )}
-                                    {formData.university && (
-                                        <span> • Universidad: {formData.university.name}</span>
-                                    )}
-                                    {!formData.difficulty && !formData.university && (
-                                        <span> Ninguno (todas las preguntas del tipo)</span>
-                                    )}
+                                    ) : countError ? (
+                                        <span className="badge-error">
+                                            ❌ {countError}
+                                            <button
+                                                onClick={loadAvailableQuestionsCount}
+                                                className="retry-mini-button"
+                                            >
+                                                🔄
+                                            </button>
+                                        </span>
+                                    ) : availableQuestions !== null ? (
+                                        <span className="badge-content">
+                                            <span className="badge-icon">📊</span>
+                                            <span className="badge-text">
+                                                {availableQuestions} pregunta{availableQuestions !== 1 ? 's' : ''} en BD
+                                            </span>
+                                        </span>
+                                    ) : null}
                                 </div>
-                            )}
-                        </div>
-                    )}
+
+                                {/* Información adicional */}
+                                {availableQuestions !== null && !loadingCount && (
+                                    <div className="badge-info">
+                                        <span>Filtros aplicados:</span>
+                                        {formData.difficulty && (
+                                            <span> Dificultad: {formData.difficulty}</span>
+                                        )}
+                                        {formData.university && (
+                                            <span> • Universidad: {formData.university.name}</span>
+                                        )}
+                                        {!formData.difficulty && !formData.university && (
+                                            <span> Ninguno (todas las preguntas del tipo)</span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                 </div>
 
                 {/* Selector de dificultad */}
@@ -459,7 +496,7 @@ const ExamConfiguration = ({
 
                     <button
                         onClick={handleGenerateExam}
-                        disabled={loading || totalQuestionsForButton === 0 || (availableQuestions === 0) || generatingExam}
+                        disabled={loading || totalQuestionsForButton === 0 || (['standard', 'personal-failed', 'global-failed'].includes(type) && availableQuestions === 0) || generatingExam}
                         className={`generate-button ${isMixedMode ? 'mixed-mode' : 'normal-mode'}`}
                     >
                         {generatingExam ? 'Generando Examen...' :

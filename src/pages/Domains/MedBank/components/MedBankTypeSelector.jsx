@@ -1,9 +1,9 @@
-// src/pages/Domains/MedBank/components/ExamTypeSelector.jsx
+// src/pages/Domains/MedBank/components/MedBankTypeSelector.jsx
 import React from 'react';
-import ExamTypeCard from './ExamTypeCard';
+import MedBankTypeCard from './MedBankTypeCard';
 import { examTypesData } from './data/examTypes';
 
-const ExamTypeSelector = ({ onExamTypeSelect }) => {
+const MedBankTypeSelector = ({ onExamTypeSelect }) => {
     return (
         <>
             <div className="text-center mb-12">
@@ -17,7 +17,7 @@ const ExamTypeSelector = ({ onExamTypeSelect }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {examTypesData.map(examType => (
-                    <ExamTypeCard
+                    <MedBankTypeCard
                         key={examType.id}
                         examType={examType}
                         onSelect={onExamTypeSelect}
@@ -28,4 +28,4 @@ const ExamTypeSelector = ({ onExamTypeSelect }) => {
     );
 };
 
-export default ExamTypeSelector;
+export default MedBankTypeSelector;

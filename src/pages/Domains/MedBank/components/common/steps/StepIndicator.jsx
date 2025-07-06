@@ -1,4 +1,4 @@
-// src/pages/Domains/MedBank/components/StandardExamConfig/StepIndicator.jsx
+// src/pages/Domains/MedBank/components/TypesExamConfig/StepIndicator.jsx
 import React from 'react';
 
 const StepIndicator = ({ steps, currentStep, completedSteps }) => {

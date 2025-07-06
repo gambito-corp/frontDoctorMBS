@@ -1,7 +1,7 @@
 // src/pages/Domains/MedBank/components/DifficultySelect/DifficultySelect.jsx
 import React, { useState, useEffect } from 'react';
-import { useApi } from '../../../../../hooks/useApi';
-import '../../MedBank.css';
+import { useApi } from '../../../../../../hooks/useApi';
+import '../../../MedBank.css';
 
 const DifficultySelect = ({
                               value,

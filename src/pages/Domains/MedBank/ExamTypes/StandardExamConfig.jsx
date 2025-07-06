@@ -1,15 +1,14 @@
-// src/pages/Domains/MedBank/components/StandardExamConfig/StandardExamConfig.jsx
 import React, { useState, useEffect } from 'react';
-import { useApi } from '../../../../../hooks/useApi';
-import StepIndicator from './StepIndicator';
-import AreaSelection from './steps/AreaSelection';
-import CategorySelection from './steps/CategorySelection';
-import TipoSelection from './steps/TipoSelection';
-import ExamConfiguration from './steps/ExamConfiguration';
-import ConfigurationSummary from './steps/ConfigurationSummary';
-import '../../MedBank.css';
+import { useApi } from '../../../../hooks/useApi';
+import StepIndicator from '../components/common/steps/StepIndicator';
+import AreaSelection from '../components/common/steps/AreaSelection';
+import CategorySelection from '../components/common/steps/CategorySelection';
+import TipoSelection from '../components/common/steps/TipoSelection';
+import ExamConfiguration from '../components/common/steps/ExamConfiguration';
+import ConfigurationSummary from '../components/common/steps/ConfigurationSummary';
+import '../MedBank.css';
 
-const StandardExamConfig = ({ onBack }) => {
+const StandardExamConfig = ({ examType, onBack }) => {
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState({
         selectedArea: null,
@@ -261,6 +260,7 @@ const StandardExamConfig = ({ onBack }) => {
                         selectedArea={formData.selectedArea}
                         onAreaSelect={(area) => handleStepData('selectedArea', area)}
                         onAutoAdvance={nextStep}
+                        type={'standard'}
                     />
                 );
             case 2:
@@ -270,6 +270,7 @@ const StandardExamConfig = ({ onBack }) => {
                         onCategorySelect={(category) => handleStepData('selectedCategory', category)}
                         selectedArea={formData.selectedArea}
                         onAutoAdvance={nextStep}
+                        type={'standard'}
                     />
                 );
             case 3:
@@ -279,6 +280,7 @@ const StandardExamConfig = ({ onBack }) => {
                         onTipoSelect={(tipo) => handleStepData('selectedTipo', tipo)}
                         selectedCategory={formData.selectedCategory}
                         onAutoAdvance={nextStep}
+                        type={'standard'}
                     />
                 );
             case 4:
@@ -293,6 +295,7 @@ const StandardExamConfig = ({ onBack }) => {
                         totalQuestions={getTotalQuestions()}
                         canAddMore={canAddMoreConfigurations()}
                         loading={loading}
+                        type={'standard'}
                     />
                 );
             default:
