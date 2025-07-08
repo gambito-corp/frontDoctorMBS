@@ -4,6 +4,7 @@ import { useApi } from '../../../../hooks/useApi';
 import { usePremiumAccess } from '../../../../hooks/usePremiumAccess';
 import { useTypewriter } from '../../../../hooks/useTypewriter';
 import PremiumModal from '../../../../components/PremiumModal';
+import { getAccessToken } from '../../../../utils/tokens';
 
 function CreateCardForm({ showCreateCard, setShowCreateCard, categories, onRefreshData }) {
     // Estados del formulario existentes
@@ -174,7 +175,7 @@ function CreateCardForm({ showCreateCard, setShowCreateCard, categories, onRefre
 
     const postFormData = async (url, formData) => {
         try {
-            const token = localStorage.getItem('sanctum_token');
+            const token = getAccessToken();
             const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}${url}`, {
                 method: 'POST',
                 headers: {

@@ -1,16 +1,10 @@
 import { useState, useCallback } from 'react';
-import axios from 'axios';
+import apiClient from '../api/axios';
+
 export const useApi = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const apiClient = axios.create({
-        baseURL: process.env.REACT_APP_API_BASE_URL,
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': "Bearer " + (localStorage.getItem(process.env.REACT_APP_TOKEN_STORAGE_KEY || "sanctum_token") || ""),
-        },
-    });
+
     const makeRequest = useCallback(async (method, url, data = null, config = {}) => {
         setLoading(true);
         setError(null);
@@ -27,12 +21,7 @@ export const useApi = () => {
                     response = await apiClient.put(url, data, config);
                     break;
                 case 'delete':
-                    // ✅ Manejar DELETE con body
-                    if (config.data) {
-                        response = await apiClient.delete(url, { ...config, data: config.data });
-                    } else {
-                        response = await apiClient.delete(url, config);
-                    }
+                    response = await apiClient.delete(url, { ...config, data });
                     break;
                 default:
                     throw new Error(`Método HTTP no soportado: ${method}`);
@@ -58,7 +47,7 @@ export const useApi = () => {
     const get = useCallback((url, config = {}) => makeRequest('get', url, null, config), [makeRequest]);
     const post = useCallback((url, data, config = {}) => makeRequest('post', url, data, config), [makeRequest]);
     const put = useCallback((url, data, config = {}) => makeRequest('put', url, data, config), [makeRequest]);
-    const del = useCallback((url, data = null, config = {}) => {if (data) {config.data = data;}return makeRequest('delete', url, null, config);}, [makeRequest]);
+    const del = useCallback((url, data = null, config = {}) => makeRequest('delete', url, data, config), [makeRequest]);
 
     return {
         loading,

@@ -1,9 +1,14 @@
-// src/pages/Domains/User/Login.jsx
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Input } from '@gambito-corp/mbs-library';
 import AuthLayout from '../../Layout/AuthLayout';
+import {
+    setAccessToken,
+    setRefreshToken,
+    getAccessToken,
+    getRefreshToken,
+} from '../../../utils/tokens';
 
 export default function Login() {
     const [error, setError] = useState(null);
@@ -11,17 +16,19 @@ export default function Login() {
     const navigate = useNavigate();
 
     const redirectIfAuthenticated = () => {
-        const tokenKey = process.env.REACT_APP_TOKEN_STORAGE_KEY || "sanctum_token";
-        const token = localStorage.getItem(tokenKey);
-        if (token && token.trim() !== '' && token !== 'null' && token !== 'undefined') {
-            // Si hay un token válido, redirigir al dashboard
+        const accessToken = getAccessToken();
+        const refreshToken = getRefreshToken();
+        if (
+            accessToken && accessToken.trim() !== '' && accessToken !== 'null' && accessToken !== 'undefined' &&
+            refreshToken && refreshToken.trim() !== '' && refreshToken !== 'null' && refreshToken !== 'undefined'
+        ) {
             navigate("/dashboard", { replace: true });
         }
-    }
+    };
 
     useEffect(() => {
         redirectIfAuthenticated();
-    }, [navigate]); // Dependencia en navigate
+    }, [navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -33,33 +40,29 @@ export default function Login() {
         const password = formData.get("password");
 
         try {
-            const formDataToSend = new FormData();
-            formDataToSend.append("email", email);
-            formDataToSend.append("password", password);
-
+            // Puedes enviar como JSON, ya que tu backend lo acepta
             const response = await axios.post(
                 `${process.env.REACT_APP_API_BASE_URL}auth/login`,
-                formDataToSend,
-                {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                    }
-                }
+                { email, password },
+                { headers: { "Content-Type": "application/json" } }
             );
 
             const result = response.data;
 
-            // SIMPLE: Solo guardar en localStorage y navegar
-            const tokenKey = process.env.REACT_APP_TOKEN_STORAGE_KEY || "sanctum_token";
-            localStorage.setItem(tokenKey, result.token);
+            // Guarda ambos tokens y el usuario
+            setAccessToken(result.access_token);
+            setRefreshToken(result.refresh_token);
             localStorage.setItem("user", JSON.stringify(result.user));
 
-            // Navegación directa sin validaciones
             navigate("/dashboard", { replace: true });
 
         } catch (err) {
             console.error('Login error:', err);
-            setError(err.response?.data?.message || "Error al conectar con el servidor.");
+            setError(
+                err.response?.data?.error ||
+                err.response?.data?.message ||
+                "Error al conectar con el servidor."
+            );
         } finally {
             setIsLoading(false);
         }

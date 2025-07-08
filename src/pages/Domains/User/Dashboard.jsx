@@ -6,7 +6,8 @@ import DashboardExamsTable from '../../../components/dashboard/DashboardExamsTab
 import WelcomeCard from '../../../components/dashboard/WelcomeCard';
 import WelcomeBanner from '../../../components/dashboard/WelcomeBanner';
 import DashboardAccessCard from '../../../components/dashboard/DashboardAccessCard';
-import { useApi } from '../../../hooks/useApi'; // ← AGREGAR ESTA IMPORTACIÓN
+import { useApi } from '../../../hooks/useApi';
+import { getAccessToken, getRefreshToken } from "../../../utils/tokens";
 
 export default function Dashboard() {
     const [user, setUser] = useState(null);
@@ -17,10 +18,22 @@ export default function Dashboard() {
         month: { labels: [], data: [] },
     });
     const navigate = useNavigate();
-    const api = useApi(); // ← USAR EL HOOK PERSONALIZADO
+    const api = useApi();
+    const isAuthenticated = () => {
+        const accessToken = getAccessToken();
+        const refreshToken = getRefreshToken();
+        return (
+            accessToken && accessToken.trim() !== '' &&
+            refreshToken && refreshToken.trim() !== ''
+        );
+    };
 
     useEffect(() => {
-        // SIMPLE: Solo verificar localStorage, sin validaciones con backend
+        if (!isAuthenticated()) {
+            navigate("/login");
+            return;
+        }
+
         const storedUser = localStorage.getItem("user");
 
         if (!storedUser) {

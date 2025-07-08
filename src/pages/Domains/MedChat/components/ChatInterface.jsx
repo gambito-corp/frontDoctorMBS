@@ -1,7 +1,6 @@
 // src/pages/Domains/MedChat/components/ChatInterface.jsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApi } from '../../../../hooks/useApi';
-import { useSSEStream } from '../../../../hooks/useSSEStream';
 import MessageBubble from './MessageBubble';
 import ThinkingLoader from "./ThinkingLoader";
 import SearchTypeSelector from './SearchTypeSelector';
@@ -45,7 +44,6 @@ const ChatInterface = ({
     const scrollTimeoutRef = useRef(null);
 
     const { post, get } = useApi();
-    const { startStream, stopStream, isStreaming } = useSSEStream();
     const { isPremium } = usePremiumAccess();
     const {
         canSendMessage,
@@ -369,12 +367,6 @@ const ChatInterface = ({
         }
     }, [handleSubmit]);
 
-    const handleStopStream = useCallback(() => {
-        stopStream();
-        setIsLoading(false);
-        setStreamingMessage('');
-        setStreamingMessageId(null);
-    }, [stopStream]);
 
     const scrollToBottom = useCallback(() => {
         setShouldAutoScroll(true);
@@ -445,15 +437,6 @@ const ChatInterface = ({
             textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
         }
     }, [inputValue]);
-
-    useEffect(() => {
-        return () => {
-            if (scrollTimeoutRef.current) {
-                clearTimeout(scrollTimeoutRef.current);
-            }
-            stopStream();
-        };
-    }, [stopStream]);
 
     // ✅ EXPONER FUNCIÓN PARA CARGAR CONVERSACIÓN (para el sidebar)
     useEffect(() => {
