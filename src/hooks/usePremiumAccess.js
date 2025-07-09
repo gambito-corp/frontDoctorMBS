@@ -8,8 +8,6 @@ export const usePremiumAccess = () => {
 
     useEffect(() => {
         const userData = localStorage.getItem('user');
-        console.log('userData', userData);
-
         if (userData) {
             try {
                 const parsedUser = JSON.parse(userData);
@@ -29,38 +27,23 @@ export const usePremiumAccess = () => {
                 switch (DEBUG_USER_TYPE) {
                     case 'normal':
                         finalPremiumStatus = false;
-                        console.log('🔧 DEBUG: Forzando usuario NORMAL (no premium)');
                         break;
                     case 'pro':
                         finalPremiumStatus = true;
-                        console.log('🔧 DEBUG: Forzando usuario PRO');
                         break;
                     case 'root':
                         finalPremiumStatus = true;
-                        console.log('🔧 DEBUG: Forzando usuario ROOT');
                         break;
                     case 'rector':
                         finalPremiumStatus = true;
-                        console.log('🔧 DEBUG: Forzando usuario RECTOR');
                         break;
                     case 'auto':
                     default:
                         finalPremiumStatus = calculatedPremium;
-                        console.log('🔧 DEBUG: Usando detección automática');
                         break;
                 }
 
                 setIsPremium(finalPremiumStatus);
-
-                console.log('isPremium result:', {
-                    isProUser,
-                    hasRootRole,
-                    hasRectorRole,
-                    calculatedPremium,
-                    DEBUG_USER_TYPE,
-                    finalPremiumStatus
-                });
-
             } catch (error) {
                 console.error('Error parsing user data:', error);
                 setIsPremium(false);
@@ -73,11 +56,8 @@ export const usePremiumAccess = () => {
     // ✅ FUNCIÓN PARA CAMBIAR ROL DE DEBUG (SOLO ROOT)
     const changeDebugRole = (newRole) => {
         if (!user || !user.roles || !user.roles.includes('root')) {
-            console.warn('⚠️ Solo usuarios ROOT pueden cambiar el rol de debug');
             return;
         }
-
-        console.log(`🔧 ROOT: Cambiando rol de debug a: ${newRole}`);
 
         // Actualizar el localStorage temporalmente
         const currentUser = JSON.parse(localStorage.getItem('user'));
