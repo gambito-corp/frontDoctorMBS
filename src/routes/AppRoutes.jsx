@@ -10,6 +10,7 @@ import VerifyEmail from '../pages/Domains/User/VerifyEmail';
 
 // Páginas principales
 import Dashboard from '../pages/Domains/User/Dashboard';
+import Planes from '../pages/Domains/User/Planes';
 import MedFlash from '../pages/Domains/MedFlash/MedFlash';
 import Exam from '../pages/Domains/MedBank/Exam';
 import Game from '../pages/Domains/MedFlash/Game';
@@ -41,6 +42,13 @@ export default function AppRoutes() {
             <Route path="/dashboard" element={
                 <MainLayout>
                     <Dashboard />
+                </MainLayout>
+            } />
+
+
+            <Route path="/planes" element={
+                <MainLayout>
+                    <Planes />
                 </MainLayout>
             } />
 

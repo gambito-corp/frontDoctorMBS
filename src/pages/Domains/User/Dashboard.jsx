@@ -8,6 +8,7 @@ import WelcomeBanner from '../../../components/dashboard/WelcomeBanner';
 import DashboardAccessCard from '../../../components/dashboard/DashboardAccessCard';
 import { useApi } from '../../../hooks/useApi';
 import { getAccessToken, getRefreshToken } from "../../../utils/tokens";
+import { getUserType } from "../../../utils/getUserType";
 
 export default function Dashboard() {
     const [user, setUser] = useState(null);
@@ -99,7 +100,7 @@ export default function Dashboard() {
     return (
         <div className="container mx-auto p-4">
             <WelcomeBanner userName={user.name} />
-            <WelcomeCard status={user.status} />
+            <WelcomeCard user={user} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                 <DashboardAccessCard

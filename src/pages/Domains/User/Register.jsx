@@ -22,7 +22,6 @@ export default function Register() {
         const pais = formData.get("pais");
         const password = formData.get("password");
         const password_confirmation = formData.get("password_confirmation");
-
         // Comprobaciones simples por si quieres validar más allá del "required" nativo
         if (!name || !email || !password || !password_confirmation || !pais) {
             setError("Por favor, completa todos los campos obligatorios.");
@@ -45,13 +44,17 @@ export default function Register() {
             });
 
             const result = response.data;
-            console.log("Registro exitoso:", result);
-            navigate('/login');
+            if ((result.status === 200 || result.status === 201) && result.success) {
+                navigate("/verify-email");
+            }
         } catch (err) {
-            console.error("Error en el registro:", err);
-            const msg = err.response?.data?.message || "Error al registrar usuario.";
-            setError(msg);
+            if (err.response?.status === 422) {
+                setError("El correo ya está registrado. ¿Quieres iniciar sesión?");
+            } else {
+                setError("Error al registrar usuario.");
+            }
         }
+
     };
 
     return (
@@ -92,8 +95,8 @@ export default function Register() {
                             className="block w-full px-3 py-[10px] border border-gray-300 rounded-md shadow-sm text-sm placeholder:text-gray-400 focus:ring-2 focus:ring-[#0d3a54] focus:border-[#0d3a54] bg-white text-gray-900"
                         >
                             <option value="">Selecciona tu país</option>
-                            <option value="espana">España</option>
-                            <option value="peru">Perú</option>
+                            <option value="España">España</option>
+                            <option value="Peru">Perú</option>
                         </select>
                     </div>
 

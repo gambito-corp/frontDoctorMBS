@@ -1,9 +1,11 @@
 // src/components/NavBar.jsx
-import { useState, useEffect, Fragment } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, Transition } from '@headlessui/react';
+import {Fragment, useEffect, useState} from 'react';
+import {Link, useLocation} from 'react-router-dom';
+import {Menu, Transition} from '@headlessui/react';
 import {useApi} from '../../hooks/useApi';
 import RoleSelector from '../RoleSelector';
+import {getUser, removeAccessToken, removeRefreshToken, removeUser,} from '../../utils/tokens';
+
 export default function NavBar() {
     const location = useLocation();
     const [user, setUser] = useState(null);
@@ -14,110 +16,78 @@ export default function NavBar() {
 
     const api = useApi();
 
-
+    // Cargar usuario y tokens desde utils
     useEffect(() => {
-        // Cuando subjects se carga, establece el valor inicial de currentSubject
-        if (subjects.length > 0) {
-            const currentTeam = subjects.find(subject => subject.is_current === true);
-            if (currentTeam && !currentSubject) {
-                setCurrentSubject(currentTeam.id.toString()); // Asegúrate de que sea string
-            }
-        }
-    }, [subjects]); // Se ejecuta cuando subjects cambia
-    useEffect(() => {
-        // Obtener usuario del localStorage
-        const storedUser = localStorage.getItem("user");
+        const storedUser = getUser();
         if (storedUser) {
             try {
-                const parsedUser = JSON.parse(storedUser);
+                const parsedUser = typeof storedUser === 'string' ? JSON.parse(storedUser) : storedUser;
                 setUser(parsedUser);
-                // Configurar menú según el rol
-                const menuItems = getNavigationItemsByRole(parsedUser);
+                setNavigationItems(getNavigationItemsByRole(parsedUser));
                 getTeamsbyUser(parsedUser);
-                setNavigationItems(menuItems);
             } catch (error) {
                 console.error('❌ Error al parsear usuario:', error);
                 setUser(null);
                 setNavigationItems(getNavigationItemsByRole(null));
             }
         } else {
-            console.log('❌ No hay usuario en localStorage');
             setNavigationItems(getNavigationItemsByRole(null));
         }
     }, []);
 
-    // FUNCIÓN PARA OBTENER MENÚ SEGÚN ROL - Versión mejorada
+    // Mantener currentSubject sincronizado con subjects
+    useEffect(() => {
+        if (subjects.length > 0) {
+            const currentTeam = subjects.find(subject => subject.is_current === true);
+            if (currentTeam && !currentSubject) {
+                setCurrentSubject(currentTeam.id.toString());
+            }
+        }
+    }, [subjects, currentSubject]);
+
+    // Menú según roles
     const getNavigationItemsByRole = (user) => {
-        // Menú por defecto si no hay usuario o roles
         const defaultMenu = [
             { name: 'Dashboard', path: '/dashboard', icon: '🏠' },
         ];
 
         if (!user) {
-            console.log('❌ Usuario no autenticado, usando menú por defecto');
             window.location.href = '/login';
             return [];
         }
 
         if (!user.roles || !Array.isArray(user.roles)) {
-            console.log('❌ Usuario sin roles válidos, usando menú por defecto');
             window.location.href = '/login';
             return [];
         }
 
-        // Verificar roles específicos
-        const isRoot = user.roles.includes('root');
-        const isAdmin = user.roles.includes('admin');
-        const isPro = user.is_pro === 1 || user.roles.includes('pro');
-
-        // Menú base para todos los usuarios autenticados
-        let menuItems = [
-            { name: 'Dashboard', path: '/dashboard', icon: '🏠' },
-            { name: 'MedFlash', path: '/medflash', icon: '🧠' },
+        return [
+            {name: 'Dashboard', path: '/dashboard', icon: '🏠'},
+            {name: 'MedFlash', path: '/medflash', icon: '🧠'},
+            {name: 'MedBank', path: '/medbank', icon: '📚'},
+            {name: 'DoctorMBS', path: '/doctor-mbs', icon: '💬'},
         ];
-
-        // Agregar items según roles
-        if (isPro || isAdmin || isRoot) {
-            menuItems.push({ name: 'MedBank', path: '/medbank', icon: '📚' });
-            menuItems.push({ name: 'DoctorMBS', path: '/doctor-mbs', icon: '💬' });
-        }
-
-        // TODO: ADMINISTRACION MENU
-        // Items exclusivos para administradores y root
-        // if (isAdmin || isRoot) {
-        //     menuItems.push({ name: 'Reportes', path: '/reports', icon: '📊' });
-        // }
-        //
-        // // Items exclusivos para root
-        // if (isRoot) {
-        //     menuItems.push({ name: 'Admin', path: '/admin', icon: '⚙️' });
-        //     menuItems.push({ name: 'Usuarios', path: '/admin/users', icon: '👥' });
-        // }
-        //
-        // console.log('📋 Menú generado:', menuItems);
-        return menuItems;
     };
-    const getTeamsbyUser = async (user) => {
-        if (!user) return []; // Return an empty array if there's no user
 
+    // Obtener equipos del usuario
+    const getTeamsbyUser = async (user) => {
+        if (!user) return [];
         try {
-            const response = await api.get('teams'); // Await the API response
+            const response = await api.get('teams');
             if (response.success && response.data.teams) {
-                setCurrentTeam(response.data.current)
+                setCurrentTeam(response.data.current);
                 setSubjects(response.data.teams);
-                return [];
             }
-            console.error('Unexpected API response:', response);
-            return []; // Return an empty array in case of an unexpected structure
         } catch (error) {
             console.error('Error fetching teams:', error);
-            return []; // Return an empty array in case of an error
         }
     };
 
-
+    // Logout usando utils
     const handleLogout = () => {
-        localStorage.clear();
+        removeUser();
+        removeAccessToken();
+        removeRefreshToken();
         window.location.href = '/login';
     };
 
@@ -153,7 +123,6 @@ export default function NavBar() {
                                 }`}
                             >
                                 {item.name}
-                                {/* Indicador visual para usuarios root */}
                                 {user?.roles?.includes('root') && item.name === 'Admin' && (
                                     <span className="ml-1 text-xs bg-red-500 text-white px-1 rounded">ROOT</span>
                                 )}
@@ -193,14 +162,11 @@ export default function NavBar() {
                                             <span className="text-gray-700 font-medium">
                                                 {user.name?.split(' ')[0]}
                                             </span>
-
-                                            {/* Mostrar rol si es root */}
                                             {user.roles?.includes('root') && (
                                                 <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full font-medium">
                                                     ROOT
                                                 </span>
                                             )}
-
                                             <img
                                                 className="h-8 w-8 rounded-full border-2 border-gray-300"
                                                 src={user.profile_photo_url || "https://med-by-students.s3.sa-east-1.amazonaws.com/StaticFiles/user-no-foto.png"}
@@ -212,7 +178,6 @@ export default function NavBar() {
                                         </div>
                                     </Menu.Button>
                                 </div>
-
                                 <Transition
                                     as={Fragment}
                                     enter="transition ease-out duration-200"
@@ -226,8 +191,6 @@ export default function NavBar() {
                                         <div className="px-4 py-2 border-b border-gray-100">
                                             <p className="text-sm font-medium text-gray-900">{user.name}</p>
                                             <p className="text-sm text-gray-500">{user.email}</p>
-
-                                            {/* Mostrar roles */}
                                             <div className="mt-1 flex flex-wrap gap-1">
                                                 {user.roles?.map((role) => (
                                                     <span
@@ -239,7 +202,6 @@ export default function NavBar() {
                                                 ))}
                                             </div>
                                         </div>
-
                                         <Menu.Item>
                                             {({ active }) => (
                                                 <Link
@@ -252,8 +214,6 @@ export default function NavBar() {
                                                 </Link>
                                             )}
                                         </Menu.Item>
-
-                                        {/* Opción adicional para usuarios root */}
                                         {user.roles?.includes('root') && (
                                             <Menu.Item>
                                                 {({ active }) => (
@@ -268,7 +228,6 @@ export default function NavBar() {
                                                 )}
                                             </Menu.Item>
                                         )}
-
                                         <Menu.Item>
                                             {({ active }) => (
                                                 <button
@@ -295,7 +254,6 @@ export default function NavBar() {
                     </div>
                 </div>
             </div>
-
             {/* MENÚ MÓVIL */}
             <div className="md:hidden">
                 <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">

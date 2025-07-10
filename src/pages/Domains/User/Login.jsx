@@ -1,34 +1,25 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { Input } from '@gambito-corp/mbs-library';
 import AuthLayout from '../../Layout/AuthLayout';
 import {
     setAccessToken,
     setRefreshToken,
-    getAccessToken,
-    getRefreshToken,
+    setUser,
 } from '../../../utils/tokens';
+import { useAuth } from '../../../hooks/useAuth';
+import { useApi } from '../../../hooks/useApi';
 
 export default function Login() {
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
-
-    const redirectIfAuthenticated = () => {
-        const accessToken = getAccessToken();
-        const refreshToken = getRefreshToken();
-        if (
-            accessToken && accessToken.trim() !== '' && accessToken !== 'null' && accessToken !== 'undefined' &&
-            refreshToken && refreshToken.trim() !== '' && refreshToken !== 'null' && refreshToken !== 'undefined'
-        ) {
-            navigate("/dashboard", { replace: true });
-        }
-    };
+    const { checkAuthAndRedirect, isValid } = useAuth();
+    const { post } = useApi();
 
     useEffect(() => {
-        redirectIfAuthenticated();
-    }, [navigate]);
+        checkAuthAndRedirect();
+    }, [checkAuthAndRedirect]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -39,112 +30,59 @@ export default function Login() {
         const email = formData.get("email");
         const password = formData.get("password");
 
-        try {
-            // Puedes enviar como JSON, ya que tu backend lo acepta
-            const response = await axios.post(
-                `${process.env.REACT_APP_API_BASE_URL}auth/login`,
-                { email, password },
-                { headers: { "Content-Type": "application/json" } }
-            );
+        const { success, data, error: apiError } = await post(
+            `${process.env.REACT_APP_API_BASE_URL}auth/login`,
+            { email, password },
+            { headers: { "Content-Type": "application/json" } }
+        );
 
-            const result = response.data;
+        if (success) {
+            setAccessToken(data.access_token);
+            setRefreshToken(data.refresh_token);
+            setUser(data.user);
 
-            // Guarda ambos tokens y el usuario
-            setAccessToken(result.access_token);
-            setRefreshToken(result.refresh_token);
-            localStorage.setItem("user", JSON.stringify(result.user));
-
-            navigate("/dashboard", { replace: true });
-
-        } catch (err) {
-            console.error('Login error:', err);
-            setError(
-                err.response?.data?.error ||
-                err.response?.data?.message ||
-                "Error al conectar con el servidor."
-            );
-        } finally {
-            setIsLoading(false);
+            if (!isValid(data.user.email_verified_at)) {
+                navigate("/verify-email");
+            } else {
+                navigate("/dashboard", { replace: true });
+            }
+        } else {
+            setError(apiError || "Error al conectar con el servidor.");
         }
+        setIsLoading(false);
     };
 
     return (
         <AuthLayout>
-            <div className="text-center">
+            <form onSubmit={handleSubmit} className="max-w-md w-full p-8 bg-white rounded-md">
                 <div className="flex justify-center mb-6">
                     <img src="https://med-by-students.s3.sa-east-1.amazonaws.com/StaticFiles/mbs-logo.svg" alt="Logo" className="h-10" />
                 </div>
-
-                <p className="text-sm mb-6 text-gray-600">
-                    Ingresa con tu cuenta personal para guardar tu progreso individual.
-                </p>
-
                 {error && (
                     <div className="mb-4 text-sm text-red-600 bg-red-100 p-2 rounded">
                         {error}
                     </div>
                 )}
-
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4 text-left">
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                            Correo electrónico
-                        </label>
-                        <Input
-                            type="email"
-                            name="email"
-                            icon="envelope"
-                            placeholder="tu@email.com"
-                            id="email"
-                            required
-                        />
-                    </div>
-
-                    <div className="mb-4 text-left">
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                            Contraseña
-                        </label>
-                        <Input
-                            type="password"
-                            placeholder="••••••••"
-                            id="password"
-                            name="password"
-                            required
-                            showPasswordToggle={true}
-                        />
-                    </div>
-
-                    <div className="flex items-center mb-4 text-left">
-                        <input type="checkbox" id="remember" name="remember" className="mr-2" />
-                        <label htmlFor="remember" className="text-sm text-gray-600">
-                            Mantener sesión activa
-                        </label>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-4">
-                        <Link
-                            to="/register"
-                            className="text-sm font-bold text-[#0d3a54] border border-[#0d3a54] px-4 py-2 rounded-md hover:bg-[#0d3a54] hover:text-white"
-                        >
-                            Regístrate ahora
-                        </Link>
-
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="ml-4 bg-[#0d3a54] text-white font-bold px-4 py-2 rounded-md hover:bg-[#093043] disabled:opacity-50"
-                        >
-                            {isLoading ? "Iniciando..." : "Iniciar sesión"}
-                        </button>
-                    </div>
-
-                    <div className="text-center">
-                        <Link to="/forgot-password" className="text-sm text-gray-600 hover:text-gray-900 underline">
-                            ¿Olvidaste tu contraseña?
-                        </Link>
-                    </div>
-                </form>
-            </div>
+                <div className="mb-4">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">Correo electrónico</label>
+                    <Input type="email" name="email" id="email" required />
+                </div>
+                <div className="mb-4">
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <Input type="password" name="password" id="password" required />
+                </div>
+                <div className="flex justify-between items-center">
+                    <Link
+                        to="/register"
+                        className="text-sm font-bold text-[#0d3a54] border border-[#0d3a54] px-4 py-2 rounded-md hover:bg-[#0d3a54] hover:text-white"
+                    >
+                        Regístrate ahora
+                    </Link>
+                    <button type="submit" className="bg-[#0d3a54] text-white font-bold px-4 py-2 rounded-md hover:bg-[#093043]">
+                        {isLoading ? "Iniciando..." : "Iniciar sesión"}
+                    </button>
+                </div>
+            </form>
         </AuthLayout>
     );
 }
