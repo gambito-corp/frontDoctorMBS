@@ -1,104 +1,97 @@
-import React from 'react';
+// src/pages/Domains/User/Plans.jsx
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useApi } from '../../../hooks/useApi';
 
-const plans = [
-    {
-        name: "Freemium",
-        price: "0€",
-        period: "",
-        features: [
-            "Acceso a preguntas seleccionadas",
-            "Progreso limitado",
-            "Soporte básico",
-            "Acceso a DoctorMBS limitado",
-        ],
-        cta: "Tu plan actual",
-        disabled: true,
-        highlight: false,
-    },
-    {
-        name: "Premium Mensual",
-        price: "9,99€",
-        period: "/mes",
-        features: [
-            "Acceso ilimitado a todas las preguntas",
-            "Progreso y estadísticas avanzadas",
-            "Soporte prioritario",
-            "Acceso completo a DoctorMBS",
-            "Actualizaciones premium",
-        ],
-        cta: "Elegir mensual",
-        disabled: false,
-        highlight: false,
-    },
-    {
-        name: "Premium Semestral",
-        price: "49,99€",
-        period: "/6 meses",
-        features: [
-            "Todo lo de Premium Mensual",
-            "6 meses por el precio de 5",
-            "Regalo exclusivo para suscriptores",
-        ],
-        cta: "Elegir semestral",
-        disabled: false,
-        highlight: true,
-    },
-];
+export default function Plans() {
+    const { get }          = useApi();
+    const navigate         = useNavigate();
+    const [plans, setPlans] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-export default function Planes() {
-    const navigate = useNavigate();
+    /* 1️⃣  Descarga de planes una sola vez */
+    useEffect(() => {
+        (async () => {
+            const { success, data } = await get('subscriptions/plans');   // <─ endpoint GET
+            if (success) setPlans(data);
+            setLoading(false);
+        })();
+    }, []);
 
+    /* 2️⃣  Acción al clicar un plan */
     const handleSelect = (plan) => {
-        // Aquí puedes pasar el tipo de plan a la página de pagos si lo necesitas
-        if (!plan.disabled) {
-            navigate('/pagos', { state: { plan: plan.name } });
+        // abre la URL del plan (Mercado Pago, WhatsApp, etc.)
+        if (plan.url) {
+            window.location.href = plan.url;            // redirección externa
+            return;
         }
+        // fallback: checkout interno por nombre
+        navigate('/suscripcion/checkout', { state: { plan: plan.name } });
     };
+
+    /* 3️⃣  Derivados visuales */
+    const isDisabled  = (plan) => Number(plan.price) === 0;               // ejemplo
+    const isHighlight = (plan) => plan.duration_days >= 180;              // ejemplo
+
+    /* 4️⃣  UI */
+    if (loading) {
+        return (
+            <div className="flex justify-center mt-20">
+                <span className="animate-pulse text-gray-500">Cargando planes…</span>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center py-12">
             <h1 className="text-3xl font-bold text-[#0d3a54] mb-2">Elige tu plan</h1>
-            <p className="mb-10 text-gray-600">Mejora tu experiencia y desbloquea todo el potencial de DoctorMBS</p>
+            <p className="mb-10 text-gray-600">
+                Mejora tu experiencia y desbloquea todo el potencial de DoctorMBS
+            </p>
+
             <div className="flex flex-col md:flex-row gap-8">
                 {plans.map((plan) => (
                     <div
-                        key={plan.name}
+                        key={plan.id}
                         className={`flex-1 bg-white rounded-xl shadow-lg border-2 p-8 flex flex-col transition-transform duration-300
-                            ${plan.highlight ? 'border-yellow-400 scale-105' : 'border-gray-200'}
-                        `}
+                        ${isHighlight(plan) ? 'border-yellow-400 scale-105' : 'border-gray-200'}`}
                     >
-                        <h2 className={`text-2xl font-bold mb-2 ${plan.highlight ? 'text-yellow-600' : 'text-[#0d3a54]'}`}>
+                        <h2
+                            className={`text-2xl font-bold mb-2 ${
+                                isHighlight(plan) ? 'text-yellow-600' : 'text-[#0d3a54]'
+                            }`}
+                        >
                             {plan.name}
                         </h2>
+
                         <div className="flex items-end mb-4">
-                            <span className="text-4xl font-extrabold">{plan.price}</span>
-                            <span className="text-gray-500 ml-1">{plan.period}</span>
+                            <span className="text-4xl font-extrabold">S/ {plan.price}</span>
+                            {plan.duration_days && (
+                                <span className="text-gray-500 ml-1">
+                  /{plan.duration_days >= 30 ? `${plan.duration_days / 30} mes` : `${plan.duration_days} días`}
+                </span>
+                            )}
                         </div>
-                        <ul className="mb-6 space-y-2">
-                            {plan.features.map((feature, idx) => (
-                                <li key={idx} className="flex items-center text-gray-700">
-                                    <span className="mr-2 text-green-500">✔️</span>
-                                    {feature}
-                                </li>
-                            ))}
-                        </ul>
+
+                        <p className="text-gray-700 text-sm mb-6">{plan.description}</p>
+
                         <button
-                            disabled={plan.disabled}
+                            disabled={isDisabled(plan)}
                             onClick={() => handleSelect(plan)}
                             className={`mt-auto py-2 px-6 rounded-lg font-semibold transition-colors
-                                ${plan.disabled
+                ${isDisabled(plan)
                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                : plan.highlight
+                                : isHighlight(plan)
                                     ? 'bg-yellow-400 hover:bg-yellow-500 text-yellow-900'
-                                    : 'bg-[#0d3a54] hover:bg-[#093043] text-white'
-                            }
-                            `}
+                                    : 'bg-[#0d3a54] hover:bg-[#093043] text-white'}`}
                         >
-                            {plan.cta}
+                            {isDisabled(plan) ? 'Tu plan actual' : 'Seleccionar'}
                         </button>
-                        {plan.highlight && (
-                            <div className="mt-4 text-xs text-yellow-700 font-bold text-center">¡Más popular!</div>
+
+                        {isHighlight(plan) && (
+                            <div className="mt-4 text-xs text-yellow-700 font-bold text-center">
+                                ¡Más popular!
+                            </div>
                         )}
                     </div>
                 ))}

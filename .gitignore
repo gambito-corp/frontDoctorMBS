@@ -6,7 +6,7 @@
 .pnp.js
 .env
 .idea
-
+.mcp.local.json
 # testing
 /coverage
 

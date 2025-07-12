@@ -1,0 +1,7 @@
+/* El iframe de los Secure Fields debe ocupar todo el wrapper */
+.mp-field > iframe{
+    position:static !important;   /* cancela el absolute por defecto */
+    width:100%;
+    height:100%;
+    display:block;
+}
