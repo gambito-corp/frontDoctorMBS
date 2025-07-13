@@ -37,7 +37,7 @@ export const useAuth = () => {
     }, []);
 
     // Chequea acceso y estado de verificación, redirige si es necesario
-    const checkAuthAndRedirect = useCallback(async (redirectIfVerified = '/dashboard', redirectIfNotVerified = '/verify-email') => {
+    const checkAuthAndRedirect = useCallback(async (redirectIfVerified = '/dashboard', redirectIfNotVerified = '/login') => {
         const accessToken = getAccessToken();
         const refreshToken = getRefreshToken();
         const user = getCurrentUser();

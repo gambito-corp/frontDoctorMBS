@@ -6,7 +6,8 @@ import Login from '../pages/Domains/User/Login';
 import Register from '../pages/Domains/User/Register';
 import ForgotPassword from '../pages/Domains/User/ForgotPassword';
 import ResetPassword from '../pages/Domains/User/ResetPassword';
-import VerifyEmail from '../pages/Domains/User/VerifyEmail';
+// import VerifyEmail from '../pages/Domains/User/VerifyEmail';
+
 
 // Páginas principales
 import Dashboard from '../pages/Domains/User/Dashboard';
@@ -31,7 +32,7 @@ export default function AppRoutes() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
+            {/*<Route path="/verify-email" element={<VerifyEmail />} />*/}
 
             {/* Rutas principales - SIN PROTECCIÓN */}
             <Route path="/" element={

@@ -45,7 +45,7 @@ export default function Register() {
 
             const result = response.data;
             if ((result.status === 200 || result.status === 201) && result.success) {
-                navigate("/verify-email");
+                navigate("/login");
             }
         } catch (err) {
             if (err.response?.status === 422) {

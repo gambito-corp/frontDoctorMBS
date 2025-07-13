@@ -42,7 +42,7 @@ export default function Login() {
             setUser(data.user);
 
             if (!isValid(data.user.email_verified_at)) {
-                navigate("/verify-email");
+                navigate("/login");
             } else {
                 navigate("/dashboard", { replace: true });
             }
