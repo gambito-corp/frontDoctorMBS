@@ -124,9 +124,8 @@ const ExamConfiguration = ({
 
     const handleNumQuestionsChange = (event) => {
         const value = parseInt(event.target.value) || 1;
-        const maxAllowed = 200 - totalQuestions;
-        let finalMax = maxAllowed;
-        if (availableQuestions !== null && availableQuestions < maxAllowed) {
+        let finalMax = maxQuestionsAllowed;          // ya incluye cap por usuario
+        if (availableQuestions !== null && availableQuestions < finalMax) {
             finalMax = availableQuestions;
         }
         const clampedValue = Math.min(Math.max(value, 1), finalMax);
@@ -143,7 +142,8 @@ const ExamConfiguration = ({
         onDataChange('university', university || null);
     };
 
-    const maxQuestionsAllowed = 200 - totalQuestions;
+    const userCap          = isPremium ? 200 : 10;               // 200 ó 10
+    const maxQuestionsAllowed = Math.min(userCap, 200 - totalQuestions);
     const currentConfigQuestions = formData.difficulty ? formData.numQuestions : 0;
     const totalWithCurrent = totalQuestions + currentConfigQuestions;
 
@@ -170,133 +170,90 @@ const ExamConfiguration = ({
 
     const handleGenerateExam = async () => {
         setExamError(null);
-        let letAcces = false;
 
-        if (typeof window !== 'undefined') {
-            const userData = isPremium.user
-            if (userData) {
-                try {
-                    const parsedUser = JSON.parse(userData);
-                    // 1. Si pagó (is_pro === true o 1)
-                    letAcces = parsedUser.is_pro === true || parsedUser.is_pro === 1;
-                    // 2. Si no pagó, pero tiene rol especial
-                    if (!letAcces) {
-                        const roles = parsedUser.roles || [];
-                        letAcces = roles.includes('root') || roles.includes('rector') || roles.includes('student');
-                    }
-                } catch (error) {
-                    console.error('Error parsing user data:', error);
-                }
-            }
-        }
+        /* 1. ¿cuántas preguntas se van a generar? */
+        const questionsRequested = isMixedMode
+            ? totalWithCurrent           // configuraciones guardadas + actual
+            : formData.numQuestions;     // solo configuración actual
 
-        // Limite para usuarios no premium
-        const totalQuestionsForButton = isMixedMode ? totalWithCurrent : currentConfigQuestions;
-        if (!letAcces && totalQuestionsForButton > 10) {
+        /* 2. Si NO es premium y supera 10 → mostrar modal y salir */
+        if (!isPremium && questionsRequested > 10) {
             setShowPremiumModal(true);
             return;
         }
 
+        /* 3. Validaciones habituales ----------------------------------- */
         if (!formData.difficulty) {
-            alert('⚠️ Por favor, selecciona una dificultad antes de generar el examen.');
+            alert('⚠️ Selecciona una dificultad antes de generar el examen.');
             return;
         }
-
         if (!isCurrentConfigComplete) {
-            alert('Por favor, completa todos los campos de la configuración actual');
+            alert('Completa todos los campos de la configuración actual.');
             return;
         }
-
         if (
-            ['standard', 'personal-failed', 'global-failed'].includes(type) &&
+            ['standard','personal-failed','global-failed'].includes(type) &&
             availableQuestions !== null &&
-            availableQuestions === 0
+            (availableQuestions === 0 || availableQuestions < formData.numQuestions)
         ) {
-            alert('⚠️ No hay preguntas disponibles para esta configuración.');
+            alert('⚠️ No hay suficientes preguntas disponibles para esta configuración.');
             return;
         }
 
-        if (
-            ['standard', 'personal-failed', 'global-failed'].includes(type) &&
-            availableQuestions !== null &&
-            availableQuestions < formData.numQuestions
-        ) {
-            alert(`⚠️ Solo hay ${availableQuestions} preguntas disponibles para esta configuración.`);
-            return;
-        }
-
+        /* 4. Construir payload y llamar al backend ---------------------- */
         setGeneratingExam(true);
 
         try {
-            let payload = {
-                title: examTitle,
-                duration: examDuration,
+            const currentConfig = {
+                area_id      : formData.selectedArea.id,
+                category_id  : formData.selectedCategory.id,
+                tipo_id      : formData.selectedTipo.id,
+                num_questions: formData.numQuestions,
+                difficulty   : formData.difficulty,
+                university_id: formData.university?.id ?? null,
             };
 
-            if (isMixedMode) {
-                // MODO MIXTO
-                const configs = savedConfigurations.map(cfg => ({
-                    area_id: cfg.area.id,
-                    category_id: cfg.category.id,
-                    tipo_id: cfg.tipo.id,
-                    num_questions: cfg.numQuestions,
-                    difficulty: cfg.difficulty,
-                    university_id: cfg.university?.id || null
-                }));
-
-                // Incluye la configuración actual si está completa
-                configs.push({
-                    area_id: formData.selectedArea.id,
-                    category_id: formData.selectedCategory.id,
-                    tipo_id: formData.selectedTipo.id,
-                    num_questions: formData.numQuestions,
-                    difficulty: formData.difficulty,
-                    university_id: formData.university?.id || null
-                });
-
-                payload = {
-                    ...payload,
-                    mode: type,
-                    current_config: configs[configs.length - 1],
-                    saved_configs: configs.slice(0, -1)
-                };
-            } else {
-                // MODO NORMAL
-                payload = {
-                    ...payload,
-                    mode: type,
-                    current_config: {
-                        area_id: formData.selectedArea.id,
-                        category_id: formData.selectedCategory.id,
-                        tipo_id: formData.selectedTipo.id,
-                        num_questions: formData.numQuestions,
-                        difficulty: formData.difficulty,
-                        university_id: formData.university?.id || null
-                    }
-                };
-            }
-
-            const result = await post(`medbank/generate-exam/${type}`, payload);
-
-            if (result?.data?.success) {
-                const examId = result.data.data.exam_id;
-                // Redirige a la pantalla de juego con el examId
-                navigate(`/medbank/${examId}`);
-            } else {
-                let msg = result?.data?.message || 'Error desconocido';
-                if (result?.data?.errors) {
-                    msg += '\n' + Object.values(result.data.errors).flat().join('\n');
+            const payload = isMixedMode
+                ? {
+                    title         : examTitle,
+                    duration      : examDuration,
+                    mode          : type,
+                    current_config: currentConfig,
+                    saved_configs : [
+                        ...savedConfigurations.map(cfg => ({
+                            area_id      : cfg.area.id,
+                            category_id  : cfg.category.id,
+                            tipo_id      : cfg.tipo.id,
+                            num_questions: cfg.numQuestions,
+                            difficulty   : cfg.difficulty,
+                            university_id: cfg.university?.id ?? null,
+                        })),
+                    ],
                 }
+                : {
+                    title         : examTitle,
+                    duration      : examDuration,
+                    mode          : type,
+                    current_config: currentConfig,
+                };
+
+            const res = await post(`medbank/generate-exam/${type}`, payload);
+
+            if (res?.data?.success) {
+                navigate(`/medbank/${res.data.data.exam_id}`);
+            } else {
+                const msg = res?.data?.message ?? 'Error desconocido';
+                alert(`Error al generar el examen: ${msg}`);
                 setExamError(msg);
-                alert('Error al generar el examen: ' + msg);
             }
         } catch (err) {
+            alert(`Error al generar el examen: ${err.message}`);
             setExamError(err.message);
-            alert('Error al generar el examen: ' + err.message);
         } finally {
             setGeneratingExam(false);
         }
     };
+
 
     return (
         <div className="configuration-container">
@@ -527,11 +484,13 @@ const ExamConfiguration = ({
                     </div>
                 )}
             </div>
-            <PremiumModal
-                isOpen={showPremiumModal}
-                onClose={() => setShowPremiumModal(false)}
-                featureName="crear exámenes de más de 10 preguntas"
-            />
+            {!isPremium && (
+                <PremiumModal
+                    isOpen={showPremiumModal}
+                    onClose={() => setShowPremiumModal(false)}
+                    featureName="crear exámenes de más de 10 preguntas"
+                />
+            )}
         </div>
     );
 };
