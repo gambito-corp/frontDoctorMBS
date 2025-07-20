@@ -237,18 +237,41 @@ const ExamConfiguration = ({
                     current_config: currentConfig,
                 };
 
-            const res = await post(`medbank/generate-exam/${type}`, payload);
 
-            if (res?.data?.success) {
-                navigate(`/medbank/${res.data.data.exam_id}`);
-            } else {
-                const msg = res?.data?.message ?? 'Error desconocido';
-                alert(`Error al generar el examen: ${msg}`);
-                setExamError(msg);
-            }
+            /** ───────── Función auxiliar con reintento ───────── **/
+            const generateExamWithRetry = async (maxRetries = 3) => {
+                let attempt = 0;
+
+                while (attempt < maxRetries) {
+                    attempt += 1;
+
+                    try {
+                        const res = await post(`medbank/generate-exam/${type}`, payload);
+
+                        const { success, data, message } = res?.data ?? {};
+                        const examId = data?.exam_id;
+
+                        if (success && examId) {
+                            return examId;                      // ← éxito
+                        }
+
+                        throw new Error(message || 'Sin exam_id');
+                    } catch (err) {
+                        if (attempt === maxRetries) throw err; // ← se agotaron intentos
+                        await new Promise(r => setTimeout(r, 800 * attempt)); // back-off lineal
+                    }
+                }
+            };
+
+            /** ───────── Llamada principal ───────── **/
+            const examId = await generateExamWithRetry(3);
+            navigate(`/medbank/${examId}`);
+            return;
+
         } catch (err) {
-            alert(`Error al generar el examen: ${err.message}`);
-            setExamError(err.message);
+            const msg = err.message || 'No fue posible generar el examen';
+            alert(`Error al generar el examen: ${msg}`);
+            setExamError(msg);
         } finally {
             setGeneratingExam(false);
         }

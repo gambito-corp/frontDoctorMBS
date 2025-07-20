@@ -94,7 +94,7 @@ export const useApi = () => {
                 status: response.status,
             };
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.message || 'Error en la petición';
+            const errorMessage = err.response?.data?.error || err.error || 'Error en la petición';
             setError(errorMessage);
             return {
                 success: false,

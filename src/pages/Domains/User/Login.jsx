@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Input } from '@gambito-corp/mbs-library';
 import AuthLayout from '../../Layout/AuthLayout';
 import {
@@ -12,10 +12,23 @@ import { useApi } from '../../../hooks/useApi';
 
 export default function Login() {
     const [error, setError] = useState(null);
+    const [warning, setWarning] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+    const location   = useLocation();
     const { checkAuthAndRedirect, isValid } = useAuth();
     const { post } = useApi();
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const msg = params.get("warning");
+        if (msg) {
+            setWarning(decodeURIComponent(msg));
+            params.delete("warning");
+            navigate({ search: params.toString() }, { replace: true });
+        }
+    }, [location.search]);
+    /* ───────────────────────────────────────────────────────────────────────── */
 
     useEffect(() => {
         checkAuthAndRedirect();
@@ -61,6 +74,11 @@ export default function Login() {
                 {error && (
                     <div className="mb-4 text-sm text-red-600 bg-red-100 p-2 rounded">
                         {error}
+                    </div>
+                )}
+                {warning && (
+                    <div className="mb-4 text-sm text-yellow-800 bg-yellow-100 p-2 rounded">
+                        {warning}
                     </div>
                 )}
                 <div className="mb-4">
