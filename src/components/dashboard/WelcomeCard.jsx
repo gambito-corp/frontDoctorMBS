@@ -5,10 +5,8 @@ import { getUserType } from '../../utils/getUserType';
 export default function WelcomeCard({ user }) {
     const navigate = useNavigate();
     const userType = getUserType(user);
-
     // Root, Rector y Pro: acceso completo
     const isFullAccess = ['root', 'rector', 'pro'].includes(userType);
-
     // Estudiante y Freemium: acceso limitado
     const isLimited = ['estudiante', 'freemium'].includes(userType);
 

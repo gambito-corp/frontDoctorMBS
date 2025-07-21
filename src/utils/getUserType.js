@@ -4,7 +4,7 @@ export function getUserType(user) {
     const roles = user.roles || [];
     if (roles.includes('root')) return 'root';
     if (roles.includes('rector')) return 'rector';
+    if (user.is_pro === 1 || roles.includes('pro')) return 'pro';
     if (roles.includes('estudiante')) return 'estudiante';
-    if (user.status === 1 || roles.includes('pro')) return 'pro';
     return 'freemium';
 }
