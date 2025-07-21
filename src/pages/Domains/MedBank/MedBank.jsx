@@ -1,31 +1,47 @@
 import React, { useState } from 'react';
-import MedBankTypeSelector from './components/MedBankTypeSelector';
-import StandardExamConfig from './ExamTypes/StandardExamConfig';
-import AIExamConfig from './ExamTypes/AIExamConfig';
-import PdfExamConfig from './ExamTypes/PdfExamConfig';
+import MedBankTypeSelector   from './components/MedBankTypeSelector';
+import StandardExamConfig    from './ExamTypes/StandardExamConfig';
+import AIExamConfig          from './ExamTypes/AIExamConfig';
+import PdfExamConfig         from './ExamTypes/PdfExamConfig';
 import PersonalFailedExamConfig from './ExamTypes/PersonalFailedExamConfig';
-import GlobalFailedExamConfig from './ExamTypes/GlobalFailedExamConfig';
-import { useApi } from '../../../hooks/useApi';
-import { usePremiumAccess } from "../../../hooks/usePremiumAccess";
-import PremiumModal from '../../../components/PremiumModal';
+import GlobalFailedExamConfig   from './ExamTypes/GlobalFailedExamConfig';
+import { useApi }            from '../../../hooks/useApi';
+import { usePremiumAccess }  from '../../../hooks/usePremiumAccess';
+import PremiumModal          from '../../../components/PremiumModal';
+import { getUserType }       from '../../../utils/getUserType';
+import { getUser }           from '../../../utils/tokens';
 
 const PRO_EXAM_IDS = [3, 4, 5];
+const TEMP_DISABLED_IDS = [3];
+
 
 const MedBank = () => {
+    /* ───────────────── state ───────────────── */
     const [selectedExamType, setSelectedExamType] = useState(null);
-    const [examConfigData, setExamConfigData] = useState(null);
-    const [isLoadingConfig, setIsLoadingConfig] = useState(false);
+    const [examConfigData,  setExamConfigData]    = useState(null);
+    const [isLoadingConfig, setIsLoadingConfig]   = useState(false);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
 
+    /* ──────────────── hooks ──────────────── */
     const { get, loading, error } = useApi();
-    const { isPremium } = usePremiumAccess();
+    const { isPremium }           = usePremiumAccess();
 
-    // Nuevo: intercepta selección de tipos Pro si no es premium
+    const user     = getUser();
+    const userType = getUserType(JSON.parse(user));
+    const isRoot = userType === 'root';
+
+
+    /* Bloqueamos PDF (id 3) a todos excepto root */
+    const disabledExamIds = isRoot ? [] : TEMP_DISABLED_IDS;
+
+    /* ───────────────── handlers ───────────────── */
     const handleExamTypeSelect = async (examType) => {
-        if (PRO_EXAM_IDS.includes(examType.id) && !isPremium) {
+        /* 1) bloqueo por Premium (no aplica a root) */
+        if (PRO_EXAM_IDS.includes(examType.id) && !isPremium && !isRoot) {
             setShowPremiumModal(true);
             return;
         }
+
         setSelectedExamType(examType);
         setIsLoadingConfig(true);
         await fetchExamConfigData(examType);
@@ -34,30 +50,30 @@ const MedBank = () => {
 
     const fetchExamConfigData = async (examType) => {
         try {
-            switch(examType.id) {
+            switch (examType.id) {
                 case 1:
-                    const standardResult = await get('medbank/areas?type=standard');
-                    if (standardResult.success) setExamConfigData(standardResult.data);
+                    const st = await get('medbank/areas?type=standard');
+                    if (st.success) setExamConfigData(st.data);
                     break;
                 case 2:
-                    const aiResult = await get('medbank/areas?type=ai');
-                    if (aiResult.success) setExamConfigData(aiResult.data);
+                    const ai = await get('medbank/areas?type=ai');
+                    if (ai.success) setExamConfigData(ai.data);
                     break;
                 case 3:
                     setExamConfigData({ type: 'pdf' });
                     break;
                 case 4:
-                    const personalResult = await get('medbank/areas?type=personal-failed');
-                    if (personalResult.success) setExamConfigData(personalResult.data);
+                    const pf = await get('medbank/areas?type=personal-failed');
+                    if (pf.success) setExamConfigData(pf.data);
                     break;
                 case 5:
-                    const communityResult = await get('medbank/areas?type=global-failed');
-                    if (communityResult.success) setExamConfigData(communityResult.data);
+                    const gf = await get('medbank/areas?type=global-failed');
+                    if (gf.success) setExamConfigData(gf.data);
                     break;
                 default:
                     setExamConfigData(null);
             }
-        } catch (err) {
+        } catch {
             setExamConfigData(null);
         }
     };
@@ -67,90 +83,61 @@ const MedBank = () => {
         setExamConfigData(null);
     };
 
-    // Protección extra: si logra acceder por manipulación, lanza modal
-    if (selectedExamType && PRO_EXAM_IDS.includes(selectedExamType.id) && !isPremium) {
+    /* ──────────────── renders cortocircuito ──────────────── */
+    if (
+        selectedExamType &&
+        PRO_EXAM_IDS.includes(selectedExamType.id) &&
+        !isPremium &&
+        !isRoot
+    ) {
+        /* usuario normal intenta colarse en un PRO */
         return (
-            <>
-                <PremiumModal
-                    isOpen={true}
-                    onClose={() => {
-                        setShowPremiumModal(false);
-                        setSelectedExamType(null);
-                    }}
-                    featureName="esta función de examen Pro"
-                />
-            </>
+            <PremiumModal
+                isOpen
+                onClose={() => {
+                    setShowPremiumModal(false);
+                    setSelectedExamType(null);
+                }}
+                featureName="esta función de examen Pro"
+            />
         );
     }
 
     if (selectedExamType && (isLoadingConfig || loading)) {
-        return (
-            <div className="min-h-screen bg-gray-50 py-8">
-                {/* ...pantalla de carga igual que antes... */}
-            </div>
-        );
-    }
-    if (selectedExamType && selectedExamType.id === 1 && examConfigData) {
-        return (
-            <StandardExamConfig
-                examType={selectedExamType}
-                onBack={handleBackToSelection}
-            />
-        );
-    }
-    if (selectedExamType && selectedExamType.id === 2 && examConfigData) {
-        return (
-            <AIExamConfig
-                onBack={handleBackToSelection}
-            />
-        );
-    }
-    if (selectedExamType && selectedExamType.id === 3 && examConfigData) {
-        return (
-            <PdfExamConfig
-                onBack={handleBackToSelection}
-            />
-        );
-    }
-    if (selectedExamType && selectedExamType.id === 4 && examConfigData) {
-        return (
-            <PersonalFailedExamConfig
-                onBack={handleBackToSelection}
-            />
-        );
-    }
-    if (selectedExamType && selectedExamType.id === 5 && examConfigData) {
-        return (
-            <GlobalFailedExamConfig
-                onBack={handleBackToSelection}
-            />
-        );
+        return <div className="min-h-screen py-20 text-center">Cargando…</div>;
     }
 
+    /* rutas de configuración según tipo */
     if (selectedExamType && examConfigData) {
+        const id = selectedExamType.id;
+        if (id === 1) return <StandardExamConfig onBack={handleBackToSelection} />;
+        if (id === 2) return <AIExamConfig        onBack={handleBackToSelection} />;
+        if (id === 3) return <PdfExamConfig       onBack={handleBackToSelection} />;
+        if (id === 4) return <PersonalFailedExamConfig onBack={handleBackToSelection} />;
+        if (id === 5) return <GlobalFailedExamConfig   onBack={handleBackToSelection} />;
         return <>INVALIDOOOOOOOO</>;
     }
 
     if (selectedExamType && error) {
-        return (
-            <div className="min-h-screen bg-gray-50 py-8">
-                {/* ...pantalla de error igual que antes... */}
-            </div>
-        );
+        return <div className="min-h-screen py-20 text-center">Error</div>;
     }
 
+    /* ───────────────── componente principal ───────────────── */
     return (
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {!selectedExamType ? (
+                {!selectedExamType && (
                     <MedBankTypeSelector
                         onExamTypeSelect={handleExamTypeSelect}
                         isPremium={isPremium}
                         proExamIds={PRO_EXAM_IDS}
+                        disabledExamIds={disabledExamIds}
                         setShowPremiumModal={setShowPremiumModal}
+                        isRoot={isRoot}
                     />
-                ) : null}
+                )}
             </div>
+
             <PremiumModal
                 isOpen={showPremiumModal}
                 onClose={() => setShowPremiumModal(false)}
