@@ -244,6 +244,13 @@ const PdfExamConfig = ({ onBack }) => {
                     </div>
                 )}
             </div>
+            {isProcessing && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center
+                      bg-black/60 backdrop-blur-sm text-white">
+                    <div className="h-16 w-16 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                    <p className="mt-4 text-lg font-medium">Procesando PDF…</p>
+                </div>
+            )}
         </div>
     );
 };
