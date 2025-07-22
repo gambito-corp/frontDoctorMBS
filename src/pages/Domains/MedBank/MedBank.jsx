@@ -12,7 +12,7 @@ import { getUserType }       from '../../../utils/getUserType';
 import { getUser }           from '../../../utils/tokens';
 
 const PRO_EXAM_IDS = [3, 4, 5];
-const TEMP_DISABLED_IDS = [3];
+const TEMP_DISABLED_IDS = [];
 
 
 const MedBank = () => {
