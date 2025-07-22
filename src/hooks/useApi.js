@@ -35,10 +35,7 @@ export const useApi = () => {
         // Helper para ejecutar la petición con el access token actual
         const executeRequest = async (token) => {
             let response;
-            const headers = {
-                ...(config.headers || {}),
-                Authorization: `Bearer ${token || getAccessToken()}`,
-            };
+            const headers = { ...(config.headers || {}) };
             const finalConfig = { ...config, headers };
 
             switch (method.toLowerCase()) {

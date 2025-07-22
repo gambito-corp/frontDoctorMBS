@@ -44,11 +44,7 @@ const PdfExamConfig = ({ onBack }) => {
 
             console.log('📤 Enviando PDF al servidor...');
 
-            const result = await post('medbank/process-pdf', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            const result = await post('medbank/process-pdf', formData);
 
             console.log('📥 Respuesta completa del servidor:', result);
 
@@ -100,7 +96,7 @@ const PdfExamConfig = ({ onBack }) => {
 
             const result = await post('medbank/generate-exam/pdf', formData, {
                 headers: {
-                    'Content-Type': 'multipart/form-data'
+                    'Content-Type': false
                 }
             });
 

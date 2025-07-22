@@ -12,21 +12,34 @@ const apiClient = axios.create({
     baseURL: process.env.REACT_APP_API_BASE_URL,
     headers: {
         'Accept': 'application/json',
+        // Cabecera por defecto SOLO si el cuerpo NO es FormData
         'Content-Type': 'application/json',
     },
 });
 
 // Interceptor para añadir el access token a cada request
-apiClient.interceptors.request.use(
-    (config) => {
-        const token = getAccessToken();
-        if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
+apiClient.interceptors.request.use((config) => {
+    /* 1.  Añadimos el token */
+    const token = getAccessToken();
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+
+    /* 2.  Si el cuerpo es FormData ⇒ borrar Content-Type global
+           (el navegador lo generará con boundary)          */
+    if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];  // Axios ≤1.6
+        delete config.headers['content-type'];  // Axios ≥1.6
+    }
+
+    /* 3.  Si el componente envía headers['Content-Type'] = null|false
+           también la quitamos (permite override manual)             */
+    if (config.headers['Content-Type'] === null ||
+        config.headers['Content-Type'] === false) {
+        delete config.headers['Content-Type'];
+        delete config.headers['content-type'];
+    }
+
+    return config;
+}, (error) => Promise.reject(error));
 
 // Interceptor de respuesta para renovar el token si expira
 apiClient.interceptors.response.use(
