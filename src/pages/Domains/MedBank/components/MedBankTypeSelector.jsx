@@ -10,7 +10,6 @@ const MedBankTypeSelector = ({
                                  onExamTypeSelect,
                                  isPremium,
                                  proExamIds,
-                                 disabledExamIds = [],   // ← [3] para no-root
                                  setShowPremiumModal,
                                  isRoot = false,         // ← NEW
                              }) => (
@@ -28,27 +27,10 @@ const MedBankTypeSelector = ({
         {/* tarjetas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {examTypesData.map((examType) => {
-                /* bloqueo PREMIUM (no aplica a root) */
-                const isProLocked =
-                    proExamIds.includes(examType.id) && !isPremium && !isRoot;
-
-                /* bloqueo por mantenimiento (pdf para usuarios ≠ root) */
-                const isTemporarilyDisabled = disabledExamIds.includes(examType.id);
-
-                const disabled  = isProLocked || isTemporarilyDisabled;
-                const tooltip   = isTemporarilyDisabled
-                    ? DISCLAIMER_ROOT
-                    : isProLocked
-                        ? 'Esta opción requiere acceso Premium'
-                        : '';
-
                 return (
                     <MedBankTypeCard
                         key={examType.id}
                         examType={examType}
-                        disabled={disabled}
-                        tooltip={tooltip}
-                        isProLocked={isProLocked}
                         onSelect={onExamTypeSelect}
                         setShowPremiumModal={setShowPremiumModal}
                     />

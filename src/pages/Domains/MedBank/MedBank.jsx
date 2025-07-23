@@ -12,7 +12,7 @@ import { getUserType }       from '../../../utils/getUserType';
 import { getUser }           from '../../../utils/tokens';
 
 const PRO_EXAM_IDS = [3, 4, 5];
-const TEMP_DISABLED_IDS = [];
+// const TEMP_DISABLED_IDS = [];
 
 
 const MedBank = () => {
@@ -32,7 +32,7 @@ const MedBank = () => {
 
 
     /* Bloqueamos PDF (id 3) a todos excepto root */
-    const disabledExamIds = isRoot ? [] : TEMP_DISABLED_IDS;
+    // const disabledExamIds = isRoot ? [] : TEMP_DISABLED_IDS;
 
     /* ───────────────── handlers ───────────────── */
     const handleExamTypeSelect = async (examType) => {
@@ -131,7 +131,6 @@ const MedBank = () => {
                         onExamTypeSelect={handleExamTypeSelect}
                         isPremium={isPremium}
                         proExamIds={PRO_EXAM_IDS}
-                        disabledExamIds={disabledExamIds}
                         setShowPremiumModal={setShowPremiumModal}
                         isRoot={isRoot}
                     />
