@@ -375,28 +375,13 @@ function CardsList({
         <div className="bg-white rounded-lg shadow-lg p-6">
             {/* Header */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-                <div
-                    className="p-6 border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors select-none"
-                    onClick={toggleCardsList}
-                    style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
-                >
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-900">Crear Categoría</h2>
-                            <p className="text-gray-600 mt-1">Agrega nuevas categorías para organizar tus flashcards</p>
+                            <h2 className="text-2xl font-bold text-gray-900">Seleccionar Flashcards</h2>
+                            <p className="text-gray-600 mt-1">Selecciona Las Flashcards para estudiar</p>
                         </div>
-                        <svg
-                            className={`w-6 h-6 text-gray-500 transition-transform ${showCardsList ? 'rotate-180' : ''}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
                     </div>
-                </div>
 
-                {showCardsList && (
                     <div className="flex items-center space-x-2">
                         {/* ✅ BOTONES PREMIUM DE ELIMINACIÓN MASIVA */}
                         <button
@@ -458,10 +443,8 @@ function CardsList({
                             <span>{cardsViewMode === 'compact' ? 'Expandir' : 'Compactar'}</span>
                         </button>
                     </div>
-                )}
             </div>
 
-            {showCardsList && (
                 <>
                     {/* Alertas */}
                     {cardsLoading && (
@@ -624,7 +607,6 @@ function CardsList({
                         </div>
                     )}
                 </>
-            )}
 
             {/* ✅ MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
             {showDeleteModal && (

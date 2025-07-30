@@ -6,28 +6,39 @@ import {
     SecurityCode,
     createCardToken,
 } from '@mercadopago/sdk-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useApi } from '../../../hooks/useApi';
+import { getUser } from '../../../utils/tokens';
 
 /* Wrapper reutilizable para cada Secure Field  ------------------------ */
 const MPField = ({ children, label }) => (
-    <label className="block">
+    <label className="block w-full">
         <span className="text-sm text-gray-700">{label}</span>
         <div
-            className="relative border rounded h-11 w-full focus-within:ring-2
-                    focus-within:ring-[#0d3a54] mt-1"
+            className="border rounded h-12 w-full mt-1 focus-within:ring-2 focus-within:ring-[#0d3a54] flex items-center"
         >
-            {/* capa de padding visual (no intercepta el clic) */}
-            <div className="absolute inset-0 px-3 py-2 pointer-events-none" />
-            {/* iframe de Mercado Pago */}
             {children}
         </div>
     </label>
 );
 
+
 export default function Checkout() {
-    const { state } = useLocation(); // { plan: 'Premium Mensual' }
+    const { state } = useLocation(); // Esperamos: { plan: { id, name, price, duration_days, ... } }
+    const navigate = useNavigate();
     const { post, loading } = useApi();
+    const rawUser = getUser(); // rawUser es un string JSON o null
+    let user = null;
+    const plan = state?.plan;
+
+    try {
+        user = rawUser ? JSON.parse(rawUser) : null;
+    } catch (e) {
+        console.error('Error parseando el user almacenado en localStorage', e);
+        user = null;
+    }
+
+    console.log('External reference (user.id):', user?.id);
 
     const [form, setForm] = useState({
         name: '',
@@ -36,6 +47,16 @@ export default function Checkout() {
         email: '',
     });
     const [error, setError] = useState(null);
+
+    if (!plan) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-center text-red-600 font-semibold">
+                    No se ha seleccionado ningún plan. Por favor, vuelve a la lista de planes.
+                </p>
+            </div>
+        );
+    }
 
     /* --------------------------- handlers -------------------------------- */
     const handleChange = (e) =>
@@ -56,18 +77,20 @@ export default function Checkout() {
             if (!cardToken?.id) {
                 throw new Error('No se pudo generar el token de la tarjeta. Revisa los datos.');
             }
-
+            console.log('External reference (user.id):', user.id);
             /* 2️⃣ Crear suscripción */
-            const { success, data, error: apiErr } = await post('/subscriptions', {
-                use_plan: true,
-                plan_name: state?.plan ?? 'Premium Mensual',
-                freq: state?.plan?.includes('Semestral') ? 6 : 1,
-                amount: state?.plan?.includes('Semestral') ? 49.99 : 9.99,
-                card_token: cardToken.id,
-                email: form.email,
+            const { success, data, error: apiErr } = await post('/subscriptions/pagos', {
+                plan_id: plan.id,
+                payer_email: form.email,
+                card_token_id: cardToken.id,
+                external_reference: user.id,
             });
 
-            if (!success) throw new Error(apiErr || 'Error al suscribirse');
+            if (!success && !apiErr) {
+                console.log(apiErr);
+                debugger;
+            }
+            if (!success) throw new Error(apiErr || 'Error al crear la suscripción');
 
             /* 3️⃣ Redirigir al init_point o dashboard */
             window.location.href = data.init_point ?? '/dashboard';
@@ -81,10 +104,14 @@ export default function Checkout() {
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="w-full max-w-lg bg-white rounded shadow p-8">
                 <h2 className="text-2xl font-bold text-center text-[#0d3a54] mb-6">
-                    Suscripción {state?.plan}
+                    Suscripción: {plan.name}
                 </h2>
+                <p className="text-center mb-6 text-gray-600">
+                    Precio: S/ {plan.price} {plan.duration_days ? `(duración: ${plan.duration_days} días)` : ''}
+                </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4" id="form-checkout">
+
                     {/* Email */}
                     <label className="block">
                         <span className="text-sm text-gray-700">E-mail del titular</span>
@@ -95,7 +122,7 @@ export default function Checkout() {
                             onChange={handleChange}
                             required
                             className="mt-1 w-full border rounded px-3 py-2
-                         focus:ring-[#0d3a54] focus:border-[#0d3a54]"
+                             focus:ring-[#0d3a54] focus:border-[#0d3a54]"
                             placeholder="juan.perez@example.com"
                         />
                     </label>
@@ -109,7 +136,7 @@ export default function Checkout() {
                             onChange={handleChange}
                             required
                             className="mt-1 w-full border rounded px-3 py-2
-                         focus:ring-[#0d3a54] focus:border-[#0d3a54]"
+                             focus:ring-[#0d3a54] focus:border-[#0d3a54]"
                             placeholder="Como figura en la tarjeta"
                         />
                     </label>
@@ -123,7 +150,7 @@ export default function Checkout() {
                                 value={form.docType}
                                 onChange={handleChange}
                                 className="mt-1 w-full border rounded px-3 py-2 h-11
-                           focus:ring-[#0d3a54] focus:border-[#0d3a54]"
+                               focus:ring-[#0d3a54] focus:border-[#0d3a54]"
                             >
                                 <option>DNI</option>
                                 <option>CE</option>
@@ -139,7 +166,7 @@ export default function Checkout() {
                                 onChange={handleChange}
                                 required
                                 className="mt-1 w-full border rounded px-3 py-2
-                           focus:ring-[#0d3a54] focus:border-[#0d3a54]"
+                               focus:ring-[#0d3a54] focus:border-[#0d3a54]"
                                 placeholder="12345678"
                             />
                         </label>
@@ -149,25 +176,29 @@ export default function Checkout() {
                     <MPField label="Número de la tarjeta">
                         <CardNumber
                             options={{ placeholder: '0000 0000 0000 0000' }}
-                            style={{ iframe: { width: '100%', height: '100%' } }}
+                            style={{ iframe: { width: '100%', height: '48px' } }}
                         />
                     </MPField>
 
-                    <div className="flex gap-3">
-                        <MPField label="Vencimiento">
-                            <ExpirationDate
-                                options={{ placeholder: 'MM/YY' }}
-                                style={{ iframe: { width: '100%', height: '100%' } }}
-                            />
-                        </MPField>
-
-                        <MPField label="CVV">
-                            <SecurityCode
-                                options={{ placeholder: '123' }}
-                                style={{ iframe: { width: '100%', height: '100%' } }}
-                            />
-                        </MPField>
+                    <div className="flex gap-4">
+                        <div className="flex-1">
+                            <MPField label="Vencimiento">
+                                <ExpirationDate
+                                    options={{ placeholder: 'MM/YY' }}
+                                    style={{ iframe: { width: '100%', height: '48px' } }}
+                                />
+                            </MPField>
+                        </div>
+                        <div className="flex-1">
+                            <MPField label="CVV">
+                                <SecurityCode
+                                    options={{ placeholder: '123' }}
+                                    style={{ iframe: { width: '100%', height: '48px' } }}
+                                />
+                            </MPField>
+                        </div>
                     </div>
+
 
                     {/* Error */}
                     {error && (
@@ -179,7 +210,7 @@ export default function Checkout() {
                         type="submit"
                         disabled={loading}
                         className="w-full bg-[#0d3a54] hover:bg-[#093043] text-white
-                       font-semibold py-2 rounded"
+                           font-semibold py-2 rounded"
                     >
                         {loading ? 'Procesando…' : 'Suscribirme'}
                     </button>

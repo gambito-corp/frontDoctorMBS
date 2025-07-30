@@ -11,7 +11,7 @@ import ResetPassword from '../pages/Domains/User/ResetPassword';
 
 // Páginas principales
 import Dashboard from '../pages/Domains/User/Dashboard';
-import Planes from '../pages/Domains/User/Planes';
+import Planes from '../pages/Domains/Suscripciones/Plans';
 import Checkout from '../pages/Domains/Suscripciones/Checkout';
 import MedFlash from '../pages/Domains/MedFlash/MedFlash';
 import Exam from '../pages/Domains/MedBank/Exam';
