@@ -20,12 +20,6 @@ export default function Plans() {
 
     /* 2️⃣  Acción al clicar un plan */
     const handleSelect = (plan) => {
-        // abre la URL del plan (Mercado Pago, WhatsApp, etc.)
-        // if (plan.url) {
-        //     window.location.href = plan.url;            // redirección externa
-        //     return;
-        // }
-        // fallback: checkout interno por nombre
         navigate('/suscripcion/checkout', { state: { plan: plan} });
     };
 
