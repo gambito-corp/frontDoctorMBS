@@ -89,6 +89,8 @@ export default function Login() {
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700">Contraseña</label>
                     <Input type="password" name="password" id="password" required />
                 </div>
+                <Link to={"/forgot-password"} className="block mb-6 text-sm text-right text-blue-500 underline">¿Olvide mi Contraseña?</Link>
+                {/*<a href="#holamundo" className={"text-sm text-blue-500 underline"}></a>*/}
                 <div className="flex justify-between items-center">
                     <Link
                         to="/register"

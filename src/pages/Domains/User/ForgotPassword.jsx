@@ -24,14 +24,10 @@ export default function ForgotPassword() {
         setLoading(true);
 
         try {
-            const response = await axios.get(`${API_URL}auth/forgot-password`, {
-                params: {
-                    email,
-                },
-                headers: {
-                    "Accept": "application/json",
-                },
-            });
+            const response = await axios.post(`${API_URL}auth/forgot-password`,
+                { email }, // <-- aquí el email está directo
+                { headers: { "Accept": "application/json" } }
+            );
 
             if (response.status === 200) {
                 setStatus("success");
